@@ -1,7 +1,6 @@
-import { Resend } from "resend";
-
-const apiKey = process.env.RESEND_API_KEY || "";
-const FROM = process.env.EMAIL_FROM || "Steren Podcast Studio <onboarding@resend.dev>";
+const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
+const FROM_EMAIL = process.env.EMAIL_FROM || "";
+const FROM_NAME = process.env.EMAIL_FROM_NAME || "Steren Podcast Studio";
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .split(",")
   .map((s) => s.trim())
@@ -21,6 +20,42 @@ export type BookingPayload = {
   hours: number[];
   topic: string;
 };
+
+type BrevoRecipient = { email: string; name?: string };
+
+type BrevoSendOpts = {
+  to: BrevoRecipient[];
+  subject: string;
+  html: string;
+  replyTo?: BrevoRecipient;
+};
+
+async function brevoSend(opts: BrevoSendOpts) {
+  if (!BREVO_API_KEY || !FROM_EMAIL) {
+    return { skipped: true as const };
+  }
+  const body: Record<string, unknown> = {
+    sender: { name: FROM_NAME, email: FROM_EMAIL },
+    to: opts.to,
+    subject: opts.subject,
+    htmlContent: opts.html,
+  };
+  if (opts.replyTo) body.replyTo = opts.replyTo;
+  const r = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": BREVO_API_KEY,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const errText = await r.text().catch(() => "");
+    throw new Error(`Brevo ${r.status}: ${errText}`);
+  }
+  return r.json();
+}
 
 function fmtHour(h: number) {
   const period = h >= 12 ? "pm" : "am";
@@ -84,7 +119,7 @@ function shellHtml(opts: {
           </tr>
         </table>
       </td></tr>
-      <tr><td style="height:3px;background:linear-gradient(90deg,transparent,#00B3E3,transparent);font-size:0;line-height:0;">&nbsp;</td></tr>
+      <tr><td style="height:3px;background:linear-gradient(90deg,transparent,${BRAND_HEX},transparent);font-size:0;line-height:0;">&nbsp;</td></tr>
       <tr><td style="padding:32px 28px 8px 28px;">
         <span style="display:inline-block;background:${opts.badgeColor};color:#ffffff;font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;padding:5px 10px;border-radius:9999px;">${escape(opts.badge)}</span>
         <h1 style="margin:14px 0 6px 0;font-size:26px;line-height:1.15;font-weight:900;letter-spacing:-0.01em;color:#0a0a0a;">${escape(opts.title)}</h1>
@@ -97,7 +132,7 @@ function shellHtml(opts: {
             <td style="font-size:12px;color:#737373;line-height:1.5;">
               <strong style="color:#0a0a0a;">Steren Villa Lucre</strong><br>
               Plaza Villa Lucre, San Miguelito, Vía Domingo Díaz<br>
-              <a href="${MAP_URL}" style="color:#00B3E3;text-decoration:none;font-weight:600;">Cómo llegar →</a>
+              <a href="${MAP_URL}" style="color:${BRAND_HEX};text-decoration:none;font-weight:600;">Cómo llegar →</a>
             </td>
           </tr>
         </table>
@@ -127,9 +162,6 @@ function detailsCardHtml(b: BookingPayload) {
 }
 
 export async function sendBookingConfirmation(b: BookingPayload) {
-  if (!apiKey) return { skipped: true };
-  const resend = new Resend(apiKey);
-
   const clientHtml = shellHtml({
     preheader: `Tu reserva del podcast studio está confirmada para ${fmtDateLong(b.date)}.`,
     badge: "Reserva confirmada",
@@ -162,44 +194,37 @@ export async function sendBookingConfirmation(b: BookingPayload) {
           <p style="margin:0 0 4px 0;font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:#737373;">Cliente</p>
           <p style="margin:0 0 6px 0;font-size:14px;color:#0a0a0a;font-weight:700;">${escape(b.firstName)} ${escape(b.lastName)}</p>
           <p style="margin:0;font-size:13px;color:#525252;">
-            <a href="mailto:${escape(b.email)}" style="color:#00B3E3;text-decoration:none;">${escape(b.email)}</a> ·
-            <a href="tel:${escape(b.phone.replace(/\s/g, ""))}" style="color:#00B3E3;text-decoration:none;">${escape(b.phone)}</a>
+            <a href="mailto:${escape(b.email)}" style="color:${BRAND_HEX};text-decoration:none;">${escape(b.email)}</a> ·
+            <a href="tel:${escape(b.phone.replace(/\s/g, ""))}" style="color:${BRAND_HEX};text-decoration:none;">${escape(b.phone)}</a>
           </p>
         </td></tr>
       </table>
       <p style="margin:18px 0 0 0;">
-        <a href="${SITE_URL}/admin" style="display:inline-block;background:#00B3E3;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;">Abrir panel</a>
+        <a href="${SITE_URL}/admin" style="display:inline-block;background:${BRAND_HEX};color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;">Abrir panel</a>
       </p>`,
   });
 
-  const results = await Promise.allSettled([
-    resend.emails.send({
-      from: FROM,
-      to: b.email,
+  const tasks: Promise<unknown>[] = [
+    brevoSend({
+      to: [{ email: b.email, name: `${b.firstName} ${b.lastName}` }],
       subject: "Reserva confirmada · Podcast Studio Steren",
       html: clientHtml,
     }),
-    ADMIN_EMAILS.length
-      ? resend.emails.send({
-          from: FROM,
-          to: ADMIN_EMAILS,
-          subject: `Nueva reserva · ${b.firstName} ${b.lastName} · ${fmtDateLong(b.date)}`,
-          html: adminHtml,
-          replyTo: b.email,
-        })
-      : Promise.resolve({ skipped: true }),
-  ]);
-
-  return {
-    client: results[0],
-    admin: results[1],
-  };
+  ];
+  if (ADMIN_EMAILS.length) {
+    tasks.push(
+      brevoSend({
+        to: ADMIN_EMAILS.map((e) => ({ email: e })),
+        subject: `Nueva reserva · ${b.firstName} ${b.lastName} · ${fmtDateLong(b.date)}`,
+        html: adminHtml,
+        replyTo: { email: b.email, name: `${b.firstName} ${b.lastName}` },
+      })
+    );
+  }
+  return Promise.allSettled(tasks);
 }
 
 export async function sendBookingCancellation(b: BookingPayload) {
-  if (!apiKey) return { skipped: true };
-  const resend = new Resend(apiKey);
-
   const clientHtml = shellHtml({
     preheader: `Tu reserva del podcast studio para ${fmtDateLong(b.date)} ha sido cancelada.`,
     badge: "Reserva cancelada",
@@ -225,35 +250,31 @@ export async function sendBookingCancellation(b: BookingPayload) {
     body:
       detailsCardHtml(b) +
       `<p style="margin:14px 0 0 0;font-size:12px;color:#737373;">
-        Cliente: <a href="mailto:${escape(b.email)}" style="color:#00B3E3;text-decoration:none;">${escape(b.email)}</a> ·
-        <a href="tel:${escape(b.phone.replace(/\s/g, ""))}" style="color:#00B3E3;text-decoration:none;">${escape(b.phone)}</a>
+        Cliente: <a href="mailto:${escape(b.email)}" style="color:${BRAND_HEX};text-decoration:none;">${escape(b.email)}</a> ·
+        <a href="tel:${escape(b.phone.replace(/\s/g, ""))}" style="color:${BRAND_HEX};text-decoration:none;">${escape(b.phone)}</a>
       </p>`,
   });
 
-  const results = await Promise.allSettled([
-    resend.emails.send({
-      from: FROM,
-      to: b.email,
+  const tasks: Promise<unknown>[] = [
+    brevoSend({
+      to: [{ email: b.email, name: `${b.firstName} ${b.lastName}` }],
       subject: "Reserva cancelada · Podcast Studio Steren",
       html: clientHtml,
     }),
-    ADMIN_EMAILS.length
-      ? resend.emails.send({
-          from: FROM,
-          to: ADMIN_EMAILS,
-          subject: `Cancelada · ${b.firstName} ${b.lastName} · ${fmtDateLong(b.date)}`,
-          html: adminHtml,
-        })
-      : Promise.resolve({ skipped: true }),
-  ]);
-
-  return { client: results[0], admin: results[1] };
+  ];
+  if (ADMIN_EMAILS.length) {
+    tasks.push(
+      brevoSend({
+        to: ADMIN_EMAILS.map((e) => ({ email: e })),
+        subject: `Cancelada · ${b.firstName} ${b.lastName} · ${fmtDateLong(b.date)}`,
+        html: adminHtml,
+      })
+    );
+  }
+  return Promise.allSettled(tasks);
 }
 
 export async function sendPasswordResetEmail(opts: { email: string; name: string; token: string }) {
-  if (!apiKey) return { skipped: true };
-  const resend = new Resend(apiKey);
-
   const url = `${SITE_URL}/admin/reset-password?token=${encodeURIComponent(opts.token)}`;
   const html = shellHtml({
     preheader: "Solicitaste restablecer tu contraseña del panel administrativo.",
@@ -278,9 +299,8 @@ export async function sendPasswordResetEmail(opts: { email: string; name: string
     `,
   });
 
-  return resend.emails.send({
-    from: FROM,
-    to: opts.email,
+  return brevoSend({
+    to: [{ email: opts.email, name: opts.name }],
     subject: "Restablece tu contraseña · Steren Podcast Studio",
     html,
   });
