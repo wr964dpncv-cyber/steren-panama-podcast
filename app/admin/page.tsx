@@ -41,6 +41,67 @@ function socialDisplay(raw: string): string {
   return raw.trim().replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
 }
 
+function csvEscape(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  const s = String(v);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function downloadBookingsCsv(bookings: Booking[]) {
+  const headers = [
+    "ID",
+    "Fecha",
+    "Hora inicio",
+    "Hora fin",
+    "Horas",
+    "Nombre",
+    "Apellido",
+    "Correo",
+    "Celular",
+    "Tema",
+    "YouTube",
+    "Instagram",
+    "TikTok",
+    "Otra red",
+    "T&C versión",
+    "T&C aceptado",
+    "Creado",
+  ];
+  const rows = bookings.map((b) => [
+    b.id,
+    b.booking_date,
+    `${b.start_hour}:00`,
+    `${b.end_hour}:00`,
+    b.end_hour - b.start_hour,
+    b.first_name,
+    b.last_name,
+    b.email,
+    b.phone,
+    b.topic,
+    b.social_youtube || "",
+    b.social_instagram || "",
+    b.social_tiktok || "",
+    b.social_other || "",
+    b.terms_version,
+    b.terms_accepted_at || "",
+    b.created_at,
+  ]);
+  const lines = [headers, ...rows].map((row) => row.map(csvEscape).join(","));
+  // UTF-8 BOM so Excel detects encoding (handles ñ, tildes correctly).
+  const csv = "﻿" + lines.join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `reservas-steren-podcast-${stamp}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function fmtHour(h: number) {
   const period = h >= 12 ? "pm" : "am";
   const display = h > 12 ? h - 12 : h === 0 ? 12 : h;
@@ -213,8 +274,8 @@ export default function AllBookingsPage() {
               )}
             </div>
 
-            <div className="ml-auto w-full sm:w-72">
-              <div className="relative">
+            <div className="ml-auto flex w-full items-center gap-2 sm:w-auto">
+              <div className="relative flex-1 sm:w-72">
                 <svg
                   width="16"
                   height="16"
@@ -237,6 +298,20 @@ export default function AllBookingsPage() {
                   className="w-full rounded-xl border border-white/15 bg-white/5 pl-9 pr-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                 />
               </div>
+              <button
+                type="button"
+                onClick={() => downloadBookingsCsv(filtered)}
+                disabled={filtered.length === 0}
+                title="Descargar CSV (se abre en Excel)"
+                className="inline-flex flex-none items-center gap-1.5 rounded-xl bg-brand px-3 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-glow transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <path d="M7 10l5 5 5-5" />
+                  <path d="M12 15V3" />
+                </svg>
+                Excel
+              </button>
             </div>
           </div>
         </div>
