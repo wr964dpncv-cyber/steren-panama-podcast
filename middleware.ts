@@ -1,15 +1,28 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { ADMIN_COOKIE, isAuthorized } from "@/lib/auth";
+import { SESSION_COOKIE, verifySession } from "@/lib/session";
 
-export function middleware(req: NextRequest) {
+const PUBLIC_ADMIN_PATHS = new Set([
+  "/admin/login",
+  "/admin/forgot-password",
+  "/admin/reset-password",
+]);
+
+const PUBLIC_ADMIN_API_PATHS = new Set([
+  "/api/admin/login",
+  "/api/admin/forgot-password",
+  "/api/admin/reset-password",
+]);
+
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const cookie = req.cookies.get(ADMIN_COOKIE)?.value;
-  const authed = isAuthorized(cookie);
+  const cookie = req.cookies.get(SESSION_COOKIE)?.value;
+  const payload = await verifySession(cookie);
+  const authed = payload !== null;
 
   if (pathname.startsWith("/admin")) {
-    if (pathname === "/admin/login") {
-      if (authed) {
+    if (PUBLIC_ADMIN_PATHS.has(pathname)) {
+      if (authed && pathname === "/admin/login") {
         const url = req.nextUrl.clone();
         url.pathname = "/admin";
         return NextResponse.redirect(url);
@@ -23,7 +36,8 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  if (pathname.startsWith("/api/admin") && pathname !== "/api/admin/login") {
+  if (pathname.startsWith("/api/admin")) {
+    if (PUBLIC_ADMIN_API_PATHS.has(pathname)) return NextResponse.next();
     if (!authed) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }

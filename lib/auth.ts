@@ -1,16 +1,31 @@
-export const ADMIN_COOKIE = "admin_session";
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
+import { getUserById, type User } from "./db";
+import { SESSION_COOKIE, verifySession } from "./session";
 
-export function getAdminToken() {
-  return process.env.ADMIN_SESSION_TOKEN || "";
+export { SESSION_COOKIE };
+
+export async function getCurrentUser(): Promise<User | null> {
+  const store = await cookies();
+  const cookie = store.get(SESSION_COOKIE)?.value;
+  const payload = await verifySession(cookie);
+  if (!payload) return null;
+  return getUserById(payload.uid);
 }
 
-export function isAuthorized(cookieValue: string | undefined): boolean {
-  const expected = getAdminToken();
-  if (!expected || !cookieValue) return false;
-  if (cookieValue.length !== expected.length) return false;
-  let diff = 0;
-  for (let i = 0; i < expected.length; i++) {
-    diff |= expected.charCodeAt(i) ^ cookieValue.charCodeAt(i);
+export async function requireUser(): Promise<{ user: User } | { error: NextResponse }> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { error: NextResponse.json({ error: "No autorizado" }, { status: 401 }) };
   }
-  return diff === 0;
+  return { user };
+}
+
+export async function requireSuperAdmin(): Promise<{ user: User } | { error: NextResponse }> {
+  const r = await requireUser();
+  if ("error" in r) return r;
+  if (!r.user.is_super_admin) {
+    return { error: NextResponse.json({ error: "Solo el super admin puede hacer esto." }, { status: 403 }) };
+  }
+  return r;
 }

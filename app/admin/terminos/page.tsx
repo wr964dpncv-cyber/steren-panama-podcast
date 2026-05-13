@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import AdminShell from "@/components/AdminShell";
 
 export default function TermsAdminPage() {
   const [content, setContent] = useState("");
@@ -61,33 +62,7 @@ export default function TermsAdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-ink-950 text-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <img
-              src="https://www.steren.com.pa/media/logo/stores/1/logo_2.png"
-              alt="Steren Panamá"
-              className="h-7 w-auto invert brightness-0"
-            />
-            <span className="hidden h-5 w-px bg-white/20 sm:block" />
-            <span className="hidden text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-400 sm:inline">
-              Admin · Términos
-            </span>
-          </div>
-          <a
-            href="/admin"
-            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-300 transition hover:bg-white/5"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 18 9 12l6-6" />
-            </svg>
-            Reservas
-          </a>
-        </div>
-        <div className="h-px w-full bg-gradient-to-r from-transparent via-brand/60 to-transparent" />
-      </header>
-
+    <AdminShell>
       <main className="mx-auto max-w-5xl px-4 py-8">
         <div className="mb-6">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand">Editor</p>
@@ -116,9 +91,7 @@ export default function TermsAdminPage() {
         </div>
 
         {error && (
-          <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-            {error}
-          </div>
+          <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>
         )}
         {success && (
           <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
@@ -155,6 +128,6 @@ export default function TermsAdminPage() {
           </button>
         </div>
       </main>
-    </div>
+    </AdminShell>
   );
 }

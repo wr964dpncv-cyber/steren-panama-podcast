@@ -10,6 +10,7 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
 const LOGO_URL = "https://www.steren.com.pa/media/logo/stores/1/logo_2.png";
 const MAP_URL = "https://maps.app.goo.gl/ipWEW9FY3e3TRyKW6";
 const SITE_URL = process.env.PUBLIC_SITE_URL || "https://steren-panama-podcast.vercel.app";
+const BRAND_HEX = "#00B3E3";
 
 export type BookingPayload = {
   firstName: string;
@@ -83,7 +84,7 @@ function shellHtml(opts: {
           </tr>
         </table>
       </td></tr>
-      <tr><td style="height:3px;background:linear-gradient(90deg,transparent,#e30613,transparent);font-size:0;line-height:0;">&nbsp;</td></tr>
+      <tr><td style="height:3px;background:linear-gradient(90deg,transparent,#00B3E3,transparent);font-size:0;line-height:0;">&nbsp;</td></tr>
       <tr><td style="padding:32px 28px 8px 28px;">
         <span style="display:inline-block;background:${opts.badgeColor};color:#ffffff;font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;padding:5px 10px;border-radius:9999px;">${escape(opts.badge)}</span>
         <h1 style="margin:14px 0 6px 0;font-size:26px;line-height:1.15;font-weight:900;letter-spacing:-0.01em;color:#0a0a0a;">${escape(opts.title)}</h1>
@@ -96,7 +97,7 @@ function shellHtml(opts: {
             <td style="font-size:12px;color:#737373;line-height:1.5;">
               <strong style="color:#0a0a0a;">Steren Villa Lucre</strong><br>
               Plaza Villa Lucre, San Miguelito, Vía Domingo Díaz<br>
-              <a href="${MAP_URL}" style="color:#e30613;text-decoration:none;font-weight:600;">Cómo llegar →</a>
+              <a href="${MAP_URL}" style="color:#00B3E3;text-decoration:none;font-weight:600;">Cómo llegar →</a>
             </td>
           </tr>
         </table>
@@ -151,7 +152,7 @@ export async function sendBookingConfirmation(b: BookingPayload) {
   const adminHtml = shellHtml({
     preheader: `Nueva reserva de ${b.firstName} ${b.lastName} para ${fmtDateLong(b.date)}.`,
     badge: "Nueva reserva",
-    badgeColor: "#e30613",
+    badgeColor: BRAND_HEX,
     title: `Nueva reserva · ${b.firstName} ${b.lastName}`,
     intro: `Se acaba de registrar una nueva reserva en el Podcast Studio.`,
     body:
@@ -161,13 +162,13 @@ export async function sendBookingConfirmation(b: BookingPayload) {
           <p style="margin:0 0 4px 0;font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:#737373;">Cliente</p>
           <p style="margin:0 0 6px 0;font-size:14px;color:#0a0a0a;font-weight:700;">${escape(b.firstName)} ${escape(b.lastName)}</p>
           <p style="margin:0;font-size:13px;color:#525252;">
-            <a href="mailto:${escape(b.email)}" style="color:#e30613;text-decoration:none;">${escape(b.email)}</a> ·
-            <a href="tel:${escape(b.phone.replace(/\s/g, ""))}" style="color:#e30613;text-decoration:none;">${escape(b.phone)}</a>
+            <a href="mailto:${escape(b.email)}" style="color:#00B3E3;text-decoration:none;">${escape(b.email)}</a> ·
+            <a href="tel:${escape(b.phone.replace(/\s/g, ""))}" style="color:#00B3E3;text-decoration:none;">${escape(b.phone)}</a>
           </p>
         </td></tr>
       </table>
       <p style="margin:18px 0 0 0;">
-        <a href="${SITE_URL}/admin" style="display:inline-block;background:#e30613;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;">Abrir panel</a>
+        <a href="${SITE_URL}/admin" style="display:inline-block;background:#00B3E3;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;">Abrir panel</a>
       </p>`,
   });
 
@@ -224,8 +225,8 @@ export async function sendBookingCancellation(b: BookingPayload) {
     body:
       detailsCardHtml(b) +
       `<p style="margin:14px 0 0 0;font-size:12px;color:#737373;">
-        Cliente: <a href="mailto:${escape(b.email)}" style="color:#e30613;text-decoration:none;">${escape(b.email)}</a> ·
-        <a href="tel:${escape(b.phone.replace(/\s/g, ""))}" style="color:#e30613;text-decoration:none;">${escape(b.phone)}</a>
+        Cliente: <a href="mailto:${escape(b.email)}" style="color:#00B3E3;text-decoration:none;">${escape(b.email)}</a> ·
+        <a href="tel:${escape(b.phone.replace(/\s/g, ""))}" style="color:#00B3E3;text-decoration:none;">${escape(b.phone)}</a>
       </p>`,
   });
 
@@ -247,4 +248,40 @@ export async function sendBookingCancellation(b: BookingPayload) {
   ]);
 
   return { client: results[0], admin: results[1] };
+}
+
+export async function sendPasswordResetEmail(opts: { email: string; name: string; token: string }) {
+  if (!apiKey) return { skipped: true };
+  const resend = new Resend(apiKey);
+
+  const url = `${SITE_URL}/admin/reset-password?token=${encodeURIComponent(opts.token)}`;
+  const html = shellHtml({
+    preheader: "Solicitaste restablecer tu contraseña del panel administrativo.",
+    badge: "Recuperar contraseña",
+    badgeColor: BRAND_HEX,
+    title: "Restablece tu contraseña",
+    intro: `Hola <strong>${escape(opts.name)}</strong>, recibimos una solicitud para restablecer la contraseña de tu cuenta del panel administrativo del Podcast Studio.`,
+    body: `
+      <p style="margin:0 0 18px 0;font-size:14px;color:#525252;line-height:1.55;">
+        Haz clic en el botón para crear una nueva contraseña. El enlace expira en 1 hora.
+      </p>
+      <p style="margin:0 0 12px 0;">
+        <a href="${url}" style="display:inline-block;background:${BRAND_HEX};color:#ffffff;font-size:13px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:13px 22px;border-radius:12px;text-decoration:none;">Restablecer contraseña</a>
+      </p>
+      <p style="margin:18px 0 0 0;font-size:11px;color:#737373;line-height:1.5;word-break:break-all;">
+        Si el botón no funciona, copia este enlace en tu navegador:<br>
+        <a href="${url}" style="color:${BRAND_HEX};text-decoration:none;">${url}</a>
+      </p>
+      <p style="margin:18px 0 0 0;font-size:11px;color:#a3a3a3;">
+        Si no solicitaste este cambio, puedes ignorar este correo.
+      </p>
+    `,
+  });
+
+  return resend.emails.send({
+    from: FROM,
+    to: opts.email,
+    subject: "Restablece tu contraseña · Steren Podcast Studio",
+    html,
+  });
 }

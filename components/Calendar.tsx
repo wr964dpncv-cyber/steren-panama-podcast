@@ -8,6 +8,7 @@ type Props = {
   min?: string;
   max?: string;
   tone?: "light" | "dark";
+  disabledDates?: string[];
 };
 
 const MONTHS = [
@@ -30,7 +31,7 @@ function stripTime(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-export default function Calendar({ value, onChange, min, max, tone = "light" }: Props) {
+export default function Calendar({ value, onChange, min, max, tone = "light", disabledDates }: Props) {
   const selected = useMemo(() => parseISO(value), [value]);
   const [viewMonth, setViewMonth] = useState<Date>(
     () => new Date(selected.getFullYear(), selected.getMonth(), 1)
@@ -40,6 +41,7 @@ export default function Calendar({ value, onChange, min, max, tone = "light" }: 
     setViewMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
   }, [selected]);
 
+  const disabledSet = useMemo(() => new Set(disabledDates || []), [disabledDates]);
   const minDate = min ? stripTime(parseISO(min)) : null;
   const maxDate = max ? stripTime(parseISO(max)) : null;
   const today = stripTime(new Date());
@@ -119,8 +121,9 @@ export default function Calendar({ value, onChange, min, max, tone = "light" }: 
           const iso = toISO(d);
           const isSelected = iso === value;
           const isToday = d.getTime() === today.getTime();
+          const isBlocked = disabledSet.has(iso);
           const disabled =
-            (minDate && d < minDate) || (maxDate && d > maxDate);
+            (minDate && d < minDate) || (maxDate && d > maxDate) || isBlocked;
           const isWeekend = d.getDay() === 0 || d.getDay() === 6;
           return (
             <button
@@ -146,6 +149,11 @@ export default function Calendar({ value, onChange, min, max, tone = "light" }: 
               {d.getDate()}
               {isToday && !isSelected && (
                 <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-brand" />
+              )}
+              {isBlocked && (
+                <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <span className="h-px w-5 rotate-45 bg-current opacity-50" />
+                </span>
               )}
             </button>
           );

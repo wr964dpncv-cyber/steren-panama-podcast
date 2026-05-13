@@ -1,45 +1,45 @@
 import { NextResponse } from "next/server";
-import { ADMIN_COOKIE, getAdminToken } from "@/lib/auth";
+import { getUserByEmail } from "@/lib/db";
+import { verifyPassword } from "@/lib/passwords";
+import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, signSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-function timingSafeEqual(a: string, b: string) {
-  if (a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
-
 export async function POST(req: Request) {
-  let body: { user?: string; pass?: string };
+  let body: { email?: string; password?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Solicitud inválida" }, { status: 400 });
   }
 
-  const user = typeof body.user === "string" ? body.user : "";
-  const pass = typeof body.pass === "string" ? body.pass : "";
-  const expectedUser = process.env.ADMIN_USER || "";
-  const expectedPass = process.env.ADMIN_PASS || "";
-  const token = getAdminToken();
-
-  if (!expectedUser || !expectedPass || !token) {
-    return NextResponse.json({ error: "Admin no configurado" }, { status: 500 });
+  const email = (typeof body.email === "string" ? body.email : "").trim().toLowerCase();
+  const password = typeof body.password === "string" ? body.password : "";
+  if (!email || !password) {
+    return NextResponse.json({ error: "Correo y contraseña son obligatorios" }, { status: 400 });
   }
 
-  const ok = timingSafeEqual(user, expectedUser) && timingSafeEqual(pass, expectedPass);
-  if (!ok) {
-    return NextResponse.json({ error: "Usuario o contraseña incorrectos" }, { status: 401 });
+  const user = await getUserByEmail(email);
+  const ok = user ? await verifyPassword(password, user.password_hash) : false;
+  if (!user || !ok) {
+    return NextResponse.json({ error: "Correo o contraseña incorrectos" }, { status: 401 });
   }
 
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(ADMIN_COOKIE, token, {
+  const token = await signSession(user.id);
+  if (!token) {
+    return NextResponse.json({ error: "Servidor mal configurado" }, { status: 500 });
+  }
+
+  const res = NextResponse.json({
+    ok: true,
+    user: { id: user.id, email: user.email, name: user.name, is_super_admin: user.is_super_admin },
+  });
+  res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: true,
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 12,
+    maxAge: SESSION_MAX_AGE_SECONDS,
   });
   return res;
 }

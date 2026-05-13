@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { ensureSchema, getTerms, sql } from "@/lib/db";
+import { ensureSchema, getTerms, isDateBlocked, sql } from "@/lib/db";
 import { sendBookingConfirmation } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
 const OPEN_HOUR = 9;
-const CLOSE_HOUR = 18;
+const CLOSE_HOUR = 20;
 
 type Body = {
   firstName?: string;
@@ -86,6 +86,18 @@ export async function POST(req: Request) {
   }
 
   await ensureSchema();
+
+  const blocked = await isDateBlocked(date);
+  if (blocked.blocked) {
+    return NextResponse.json(
+      {
+        error: blocked.reason
+          ? `Este día no está disponible: ${blocked.reason}`
+          : "Este día no está disponible para reservas.",
+      },
+      { status: 400 }
+    );
+  }
 
   const terms = await getTerms();
   if (body.termsVersion !== terms.version) {

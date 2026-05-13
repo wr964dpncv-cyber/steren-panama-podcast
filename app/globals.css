@@ -4,7 +4,7 @@
 
 :root {
   color-scheme: light;
-  --brand: 227 6 19;
+  --brand: 0 179 227;
 }
 
 html,
@@ -14,7 +14,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Tech grid backdrop */
 .bg-grid {
   background-image:
     linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
@@ -29,25 +28,18 @@ body {
   background-size: 28px 28px;
 }
 
-/* Subtle red glow used on hero */
-.glow-red::before {
+/* Cyan brand glow used on hero / login */
+.glow-brand::before {
   content: "";
   position: absolute;
   inset: -40% -20% auto auto;
   width: 60%;
   height: 80%;
-  background: radial-gradient(closest-side, rgba(227, 6, 19, 0.22), transparent 70%);
+  background: radial-gradient(closest-side, rgba(0, 179, 227, 0.28), transparent 70%);
   pointer-events: none;
   z-index: 0;
 }
 
-/* Hide native date input default decorations (won't affect our custom calendar) */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(40%) sepia(70%) saturate(7000%) hue-rotate(345deg);
-  cursor: pointer;
-}
-
-/* Custom scrollbar */
 .scroll-soft::-webkit-scrollbar {
   width: 6px;
 }

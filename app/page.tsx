@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import Calendar from "@/components/Calendar";
 
 const OPEN_HOUR = 9;
-const CLOSE_HOUR = 18;
+const CLOSE_HOUR = 20;
 const ALL_HOURS = Array.from({ length: CLOSE_HOUR - OPEN_HOUR }, (_, i) => OPEN_HOUR + i);
 
 function fmtHour(h: number) {
@@ -43,6 +43,8 @@ export default function Page() {
   const [topic, setTopic] = useState("");
   const [terms, setTerms] = useState<Terms | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [blockedDates, setBlockedDates] = useState<string[]>([]);
+  const [dateBlocked, setDateBlocked] = useState<{ blocked: boolean; reason: string }>({ blocked: false, reason: "" });
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<{ date: string; hours: number[] } | null>(null);
@@ -52,9 +54,18 @@ export default function Page() {
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch("/api/terms", { cache: "no-store" });
-        const data = await r.json();
-        if (!cancelled && r.ok) setTerms({ content: data.content, version: data.version });
+        const [termsR, blockedR] = await Promise.all([
+          fetch("/api/terms", { cache: "no-store" }),
+          fetch("/api/blocked-dates", { cache: "no-store" }),
+        ]);
+        if (!cancelled && termsR.ok) {
+          const data = await termsR.json();
+          setTerms({ content: data.content, version: data.version });
+        }
+        if (!cancelled && blockedR.ok) {
+          const data = await blockedR.json();
+          setBlockedDates((data.dates || []).map((d: { date: string }) => d.date));
+        }
       } catch {
         /* ignore */
       }
@@ -75,6 +86,7 @@ export default function Page() {
         if (cancelled) return;
         if (!r.ok) throw new Error(data.error || "Error cargando disponibilidad");
         setTaken(new Set<number>(data.takenHours ?? []));
+        setDateBlocked({ blocked: !!data.blocked, reason: data.blockedReason || "" });
         setSelected(new Set());
       } catch (e: unknown) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Error de red");
@@ -162,7 +174,7 @@ export default function Page() {
         <div className="relative mx-auto max-w-5xl px-4 py-14 sm:py-20">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-300 backdrop-blur">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
-            Reservas en línea · 9am a 6pm
+            Reservas en línea · 9am a 8pm
           </div>
           <h1 className="mt-4 max-w-2xl text-4xl font-black leading-[1.05] tracking-tight md:text-6xl">
             Podcast Studio
@@ -170,7 +182,7 @@ export default function Page() {
           </h1>
           <p className="mt-4 max-w-xl text-sm text-neutral-300 sm:text-base">
             Reserva el espacio para grabar tu próximo episodio. Selecciona la fecha,
-            las horas que necesites y listo — confirmación al instante.
+            las horas que necesites (de 9 am a 8 pm) y listo — confirmación al instante.
           </p>
           <a
             href="https://maps.app.goo.gl/ipWEW9FY3e3TRyKW6"
@@ -215,7 +227,7 @@ export default function Page() {
                 {formatLongDate(date)}
               </span>
             </div>
-            <Calendar value={date} onChange={setDate} min={today} />
+            <Calendar value={date} onChange={setDate} min={today} disabledDates={blockedDates} />
           </section>
 
           <section className="rounded-3xl bg-white p-6 shadow-soft ring-1 ring-neutral-200/80">
@@ -227,7 +239,13 @@ export default function Page() {
               </h2>
               <p className="mt-0.5 text-xs text-neutral-500">Bloques de 1 hora. Puedes elegir cuantos quieras.</p>
             </div>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-3">
+            {dateBlocked.blocked && (
+              <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <strong>Día no disponible.</strong>
+                {dateBlocked.reason ? ` ${dateBlocked.reason}` : " Por favor elige otra fecha."}
+              </div>
+            )}
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {ALL_HOURS.map((h) => {
                 const isTaken = taken.has(h);
                 const isSelected = selected.has(h);

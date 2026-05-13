@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import AdminShell from "@/components/AdminShell";
 import { CalendarPopover } from "@/components/Calendar";
 
 type Booking = {
@@ -57,7 +57,6 @@ function fmtShort(iso: string): string {
 }
 
 export default function AdminPage() {
-  const router = useRouter();
   const today = useMemo(todayInPanama, []);
   const [date, setDate] = useState(today);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -85,7 +84,7 @@ export default function AdminPage() {
   }, [load]);
 
   async function removeBooking(id: number) {
-    if (!confirm("¿Cancelar esta reserva? Se notificará al cliente.")) return;
+    if (!confirm("¿Cancelar esta reserva? Se notificará al cliente por correo.")) return;
     setBusyId(id);
     try {
       const r = await fetch(`/api/admin/bookings/${id}`, { method: "DELETE" });
@@ -101,67 +100,20 @@ export default function AdminPage() {
     }
   }
 
-  async function logout() {
-    await fetch("/api/admin/logout", { method: "POST" });
-    router.replace("/admin/login");
-    router.refresh();
-  }
-
   const totalHours = bookings.reduce((acc, b) => acc + (b.end_hour - b.start_hour), 0);
   const sorted = [...bookings].sort((a, b) => a.start_hour - b.start_hour);
   const isToday = date === today;
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-ink-950 text-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <img
-              src="https://www.steren.com.pa/media/logo/stores/1/logo_2.png"
-              alt="Steren Panamá"
-              className="h-7 w-auto invert brightness-0"
-            />
-            <span className="hidden h-5 w-px bg-white/20 sm:block" />
-            <span className="hidden text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-400 sm:inline">
-              Admin · Podcast Studio
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <a
-              href="/admin/terminos"
-              className="hidden rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-300 transition hover:bg-white/5 sm:inline-flex"
-            >
-              T&amp;C
-            </a>
-            <a
-              href="/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-300 transition hover:bg-white/5"
-            >
-              Web pública
-            </a>
-            <button
-              onClick={logout}
-              className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-brand"
-            >
-              Salir
-            </button>
-          </div>
-        </div>
-        <div className="h-px w-full bg-gradient-to-r from-transparent via-brand/60 to-transparent" />
-      </header>
-
+    <AdminShell>
       <section className="border-b border-neutral-200 bg-ink-950 text-white">
         <div className="mx-auto max-w-6xl px-4 py-8">
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-400">Reservas</p>
-              <h1 className="mt-1 text-3xl font-black capitalize tracking-tight md:text-4xl">
-                {fmtLong(date)}
-              </h1>
+              <h1 className="mt-1 text-3xl font-black capitalize tracking-tight md:text-4xl">{fmtLong(date)}</h1>
               {isToday && (
-                <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-brand/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-brand-300">
+                <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-brand/20 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-brand-300">
                   <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
                   Hoy
                 </span>
@@ -286,7 +238,7 @@ export default function AdminPage() {
           </div>
         )}
       </main>
-    </div>
+    </AdminShell>
   );
 }
 
