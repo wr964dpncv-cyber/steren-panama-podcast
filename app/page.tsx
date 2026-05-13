@@ -218,16 +218,18 @@ export default function Page() {
 
         <form onSubmit={submit} className="space-y-8">
           <section className="rounded-3xl bg-white p-6 shadow-soft ring-1 ring-neutral-200/80">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand">Paso 1</p>
                 <h2 className="text-lg font-bold tracking-tight">Elige el día</h2>
               </div>
-              <span className="hidden rounded-full bg-ink-950 px-3 py-1 text-[11px] font-semibold capitalize text-white sm:inline-block">
+              <span className="rounded-full bg-ink-950 px-3 py-1 text-[11px] font-semibold capitalize text-white">
                 {formatLongDate(date)}
               </span>
             </div>
-            <Calendar value={date} onChange={setDate} min={today} disabledDates={blockedDates} />
+            <div className="mx-auto max-w-[20rem]">
+              <Calendar value={date} onChange={setDate} min={today} disabledDates={blockedDates} />
+            </div>
           </section>
 
           <section className="rounded-3xl bg-white p-6 shadow-soft ring-1 ring-neutral-200/80">
