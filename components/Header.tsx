@@ -17,7 +17,7 @@ export default function Header() {
           href="https://www.steren.com.pa"
           target="_blank"
           rel="noopener noreferrer"
-          className="group inline-flex items-center gap-1.5 rounded-full bg-ink-950 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-soft transition hover:bg-brand sm:text-sm"
+          className="group inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-glow transition hover:bg-brand-dark sm:text-sm"
         >
           Compra Online
           <svg

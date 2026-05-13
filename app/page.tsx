@@ -169,18 +169,34 @@ export default function Page() {
     <>
       <Header />
 
-      <section className="relative isolate overflow-hidden border-b border-neutral-200 bg-ink-950 text-white glow-red">
-        <div className="bg-grid-dark absolute inset-0 opacity-60" />
+      <section className="relative isolate overflow-hidden border-b border-brand-700/50 bg-gradient-to-br from-brand-700 via-brand to-brand-500 text-white">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 opacity-30"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)",
+            backgroundSize: "28px 28px",
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-y-0 right-0 w-1/2"
+          style={{
+            background:
+              "radial-gradient(closest-side, rgba(255,255,255,0.25), transparent 70%)",
+          }}
+        />
         <div className="relative mx-auto max-w-5xl px-4 py-14 sm:py-20">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-300 backdrop-blur">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white backdrop-blur">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
             Reservas en línea · 9am a 8pm
           </div>
-          <h1 className="mt-4 max-w-2xl text-4xl font-black leading-[1.05] tracking-tight md:text-6xl">
+          <h1 className="mt-4 max-w-2xl text-4xl font-black leading-[1.05] tracking-tight text-white md:text-6xl">
             Podcast Studio
-            <span className="block text-brand">by Steren Panamá</span>
+            <span className="block text-white/85">by Steren Panamá</span>
           </h1>
-          <p className="mt-4 max-w-xl text-sm text-neutral-300 sm:text-base">
+          <p className="mt-4 max-w-xl text-sm text-white/90 sm:text-base">
             Reserva el espacio para grabar tu próximo episodio. Selecciona la fecha,
             las horas que necesites (de 9 am a 8 pm) y listo — confirmación al instante.
           </p>
@@ -188,7 +204,7 @@ export default function Page() {
             href="https://maps.app.goo.gl/ipWEW9FY3e3TRyKW6"
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs font-medium text-white backdrop-blur transition hover:bg-white/10"
+            className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-xs font-medium text-white backdrop-blur transition hover:bg-white/20"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 10c0 7-8 13-8 13s-8-6-8-13a8 8 0 0 1 16 0Z" />
@@ -207,7 +223,7 @@ export default function Page() {
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand">Paso 1</p>
                 <h2 className="text-lg font-bold tracking-tight">Elige el día</h2>
               </div>
-              <span className="rounded-full bg-ink-950 px-3 py-1 text-[11px] font-semibold capitalize text-white">
+              <span className="rounded-full bg-brand px-3 py-1 text-[11px] font-semibold capitalize text-white shadow-glow">
                 {formatLongDate(date)}
               </span>
             </div>
@@ -247,7 +263,7 @@ export default function Page() {
                         ? "cursor-not-allowed bg-neutral-100 text-neutral-400 line-through"
                         : isSelected
                           ? "bg-brand text-white shadow-glow"
-                          : "border border-neutral-200 bg-white text-ink-950 hover:border-ink-950 hover:bg-ink-950 hover:text-white",
+                          : "border border-neutral-200 bg-white text-ink-950 hover:border-brand hover:bg-brand hover:text-white",
                     ].join(" ")}
                   >
                     {fmtHour(h)} – {fmtHour(h + 1)}
@@ -256,8 +272,8 @@ export default function Page() {
               })}
             </div>
             {sortedSelected.length > 0 && (
-              <div className="mt-4 flex items-center justify-between rounded-xl bg-ink-950 px-4 py-2.5 text-xs text-white">
-                <span className="font-medium opacity-70">Seleccionado</span>
+              <div className="mt-4 flex items-center justify-between rounded-xl bg-brand px-4 py-2.5 text-xs text-white shadow-glow">
+                <span className="font-medium opacity-90">Seleccionado</span>
                 <span className="font-mono font-bold">
                   {sortedSelected.map(fmtHour).join(" · ")} · {sortedSelected.length} h
                 </span>
@@ -384,7 +400,7 @@ export default function Page() {
           <button
             type="submit"
             disabled={submitting || loadingAvailability || !terms}
-            className="group relative w-full overflow-hidden rounded-2xl bg-ink-950 px-6 py-4 text-sm font-bold uppercase tracking-[0.15em] text-white shadow-soft transition hover:bg-brand disabled:cursor-not-allowed disabled:opacity-60"
+            className="group relative w-full overflow-hidden rounded-2xl bg-brand px-6 py-4 text-sm font-bold uppercase tracking-[0.15em] text-white shadow-glow transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span className="relative z-10 inline-flex items-center justify-center gap-2">
               {submitting ? "Reservando…" : "Confirmar reserva"}
@@ -397,18 +413,18 @@ export default function Page() {
           </button>
         </form>
 
-        <section className="mt-10 overflow-hidden rounded-3xl bg-ink-950 text-white shadow-soft">
+        <section className="mt-10 overflow-hidden rounded-3xl bg-gradient-to-br from-brand-700 via-brand to-brand-500 text-white shadow-soft">
           <div className="grid gap-0 sm:grid-cols-[auto_1fr]">
-            <div className="flex items-center justify-center bg-brand p-6 sm:p-8">
+            <div className="flex items-center justify-center bg-white/10 p-6 sm:p-8 backdrop-blur">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 10c0 7-8 13-8 13s-8-6-8-13a8 8 0 0 1 16 0Z" />
                 <circle cx="12" cy="10" r="3" />
               </svg>
             </div>
             <div className="p-6 sm:p-7">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-300">Ubicación</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/80">Ubicación</p>
               <h3 className="mt-1 text-xl font-black tracking-tight">Steren Villa Lucre</h3>
-              <p className="mt-2 text-sm leading-relaxed text-neutral-300">
+              <p className="mt-2 text-sm leading-relaxed text-white/90">
                 Urbanización Villa Lucre, Plaza Villa Lucre, entre el Supermercado Rey y Farmacia El Javillo,
                 frente a La Onda. San Miguelito, Vía Domingo Díaz.
               </p>
@@ -416,7 +432,7 @@ export default function Page() {
                 href="https://maps.app.goo.gl/ipWEW9FY3e3TRyKW6"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-ink-950 transition hover:bg-brand hover:text-white"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-brand-700 transition hover:bg-brand-50"
               >
                 Cómo llegar
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
