@@ -39,11 +39,11 @@ function fmtLong(iso: string): string {
   });
 }
 
-type Filter = "upcoming" | "past" | "all";
+type Filter = "today" | "upcoming" | "past" | "all";
 
 export default function AllBookingsPage() {
   const today = useMemo(todayInPanama, []);
-  const [filter, setFilter] = useState<Filter>("upcoming");
+  const [filter, setFilter] = useState<Filter>("today");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [search, setSearch] = useState("");
@@ -93,6 +93,7 @@ export default function AllBookingsPage() {
     const q = search.trim().toLowerCase();
     return bookings
       .filter((b) => {
+        if (filter === "today" && b.booking_date !== today) return false;
         if (filter === "upcoming" && b.booking_date < today) return false;
         if (filter === "past" && b.booking_date >= today) return false;
         return true;
@@ -130,6 +131,7 @@ export default function AllBookingsPage() {
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-400">Historial</p>
               <h1 className="mt-1 text-3xl font-black tracking-tight md:text-4xl">Todas las reservas</h1>
               <p className="mt-1 text-sm text-neutral-400">
+                {filter === "today" && "Solo hoy"}
                 {filter === "upcoming" && "Hoy y próximas"}
                 {filter === "past" && "Reservas pasadas"}
                 {filter === "all" && "Todas las reservas"}
@@ -145,6 +147,9 @@ export default function AllBookingsPage() {
 
           <div className="mt-6 flex flex-wrap items-center gap-2">
             <div className="inline-flex items-center rounded-xl border border-white/15 bg-white/5 p-1">
+              <FilterBtn current={filter} value="today" onClick={setFilter}>
+                Hoy
+              </FilterBtn>
               <FilterBtn current={filter} value="upcoming" onClick={setFilter}>
                 Próximas
               </FilterBtn>
