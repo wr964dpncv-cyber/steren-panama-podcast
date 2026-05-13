@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CalendarPopover } from "@/components/Calendar";
 
 type Booking = {
   id: number;
@@ -33,14 +34,32 @@ function todayInPanama(): string {
 function addDays(date: string, days: number): string {
   const d = new Date(date + "T00:00:00");
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function fmtLong(iso: string): string {
+  return new Date(iso + "T00:00").toLocaleDateString("es-PA", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function fmtShort(iso: string): string {
+  return new Date(iso + "T00:00").toLocaleDateString("es-PA", {
+    day: "2-digit",
+    month: "short",
+  });
 }
 
 export default function AdminPage() {
   const router = useRouter();
   const today = useMemo(todayInPanama, []);
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(addDays(today, 30));
+  const [date, setDate] = useState(today);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +69,7 @@ export default function AdminPage() {
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch(`/api/admin/bookings?from=${from}&to=${to}`, { cache: "no-store" });
+      const r = await fetch(`/api/admin/bookings?from=${date}&to=${date}`, { cache: "no-store" });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || "Error");
       setBookings(data.bookings);
@@ -59,14 +78,14 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  }, [from, to]);
+  }, [date]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   async function removeBooking(id: number) {
-    if (!confirm("¿Eliminar esta reserva? Esta acción no se puede deshacer.")) return;
+    if (!confirm("¿Cancelar esta reserva? Se notificará al cliente.")) return;
     setBusyId(id);
     try {
       const r = await fetch(`/api/admin/bookings/${id}`, { method: "DELETE" });
@@ -88,21 +107,13 @@ export default function AdminPage() {
     router.refresh();
   }
 
-  const grouped = useMemo(() => {
-    const map = new Map<string, Booking[]>();
-    for (const b of bookings) {
-      const arr = map.get(b.booking_date) || [];
-      arr.push(b);
-      map.set(b.booking_date, arr);
-    }
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [bookings]);
-
   const totalHours = bookings.reduce((acc, b) => acc + (b.end_hour - b.start_hour), 0);
+  const sorted = [...bookings].sort((a, b) => a.start_hour - b.start_hour);
+  const isToday = date === today;
 
   return (
-    <div className="min-h-screen bg-neutral-100">
-      <header className="border-b border-neutral-800 bg-black text-white">
+    <div className="min-h-screen bg-neutral-50">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-ink-950 text-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <img
@@ -110,153 +121,180 @@ export default function AdminPage() {
               alt="Steren Panamá"
               className="h-7 w-auto invert brightness-0"
             />
-            <span className="hidden text-xs font-semibold uppercase tracking-widest text-neutral-400 sm:inline">
+            <span className="hidden h-5 w-px bg-white/20 sm:block" />
+            <span className="hidden text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-400 sm:inline">
               Admin · Podcast Studio
             </span>
           </div>
           <div className="flex items-center gap-2">
             <a
               href="/admin/terminos"
-              className="rounded-full border border-neutral-700 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-300 transition hover:bg-neutral-900"
+              className="hidden rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-300 transition hover:bg-white/5 sm:inline-flex"
             >
-              Editar T&amp;C
+              T&amp;C
             </a>
             <a
               href="/"
-              className="rounded-full border border-neutral-700 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-300 transition hover:bg-neutral-900"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-300 transition hover:bg-white/5"
             >
-              Ver web pública
+              Web pública
             </a>
             <button
               onClick={logout}
-              className="rounded-full bg-brand px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-brand-dark"
+              className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-brand"
             >
               Salir
             </button>
           </div>
         </div>
+        <div className="h-px w-full bg-gradient-to-r from-transparent via-brand/60 to-transparent" />
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8">
-        <div className="mb-6 flex items-end justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-brand">Reservas</p>
-            <h1 className="text-2xl font-black tracking-tight md:text-3xl">Panel de reservas</h1>
-            <p className="mt-1 text-sm text-neutral-600">
-              {bookings.length} reserva{bookings.length === 1 ? "" : "s"} · {totalHours} h totales
-            </p>
-          </div>
-        </div>
-
-        <div className="mb-6 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-neutral-200">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <section className="border-b border-neutral-200 bg-ink-950 text-white">
+        <div className="mx-auto max-w-6xl px-4 py-8">
+          <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-neutral-600">Desde</label>
-              <input
-                type="date"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-neutral-600">Hasta</label>
-              <input
-                type="date"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-              />
-            </div>
-            <div className="flex items-end">
-              <button
-                onClick={load}
-                disabled={loading}
-                className="w-full rounded-lg bg-black py-2 text-sm font-bold uppercase tracking-wider text-white transition hover:bg-neutral-800 disabled:opacity-60"
-              >
-                {loading ? "Cargando…" : "Filtrar"}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {error && (
-          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>
-        )}
-
-        {!loading && bookings.length === 0 && (
-          <div className="rounded-2xl border-2 border-dashed border-neutral-300 bg-white p-10 text-center text-sm text-neutral-500">
-            No hay reservas en este rango.
-          </div>
-        )}
-
-        <div className="space-y-6">
-          {grouped.map(([date, items]) => (
-            <section key={date} className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-neutral-200">
-              <div className="flex items-center justify-between border-b border-neutral-200 bg-neutral-50 px-5 py-3">
-                <h2 className="text-sm font-bold capitalize tracking-tight">
-                  {new Date(date + "T00:00").toLocaleDateString("es-PA", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </h2>
-                <span className="rounded-full bg-brand/10 px-2.5 py-0.5 text-xs font-bold text-brand">
-                  {items.length} reserva{items.length === 1 ? "" : "s"}
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-400">Reservas</p>
+              <h1 className="mt-1 text-3xl font-black capitalize tracking-tight md:text-4xl">
+                {fmtLong(date)}
+              </h1>
+              {isToday && (
+                <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-brand/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-brand-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
+                  Hoy
                 </span>
-              </div>
-              <div className="divide-y divide-neutral-100">
-                {items.map((b) => (
-                  <div key={b.id} className="px-5 py-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold">
-                          {b.first_name} {b.last_name}
-                        </p>
-                        <p className="text-xs text-neutral-600">
-                          <a href={`mailto:${b.email}`} className="hover:text-brand">{b.email}</a>
-                          {" · "}
-                          <a href={`tel:${b.phone.replace(/\s/g, "")}`} className="hover:text-brand">{b.phone}</a>
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="rounded-md bg-neutral-900 px-2.5 py-1 text-xs font-mono text-white">
-                          {fmtHour(b.start_hour)} – {fmtHour(b.end_hour)}
-                        </span>
-                        <button
-                          onClick={() => removeBooking(b.id)}
-                          disabled={busyId === b.id}
-                          className="rounded-md border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
-                        >
-                          {busyId === b.id ? "…" : "Eliminar"}
-                        </button>
-                      </div>
-                    </div>
-                    {b.topic && (
-                      <div className="mt-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
-                        <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-neutral-500">
-                          Tema del podcast
-                        </p>
-                        <p className="text-sm whitespace-pre-wrap text-neutral-800">{b.topic}</p>
-                      </div>
-                    )}
-                    {b.terms_accepted_at && (
-                      <p className="mt-2 text-[11px] text-neutral-500">
-                        ✓ Aceptó T&amp;C v{b.terms_version} ·{" "}
-                        {new Date(b.terms_accepted_at).toLocaleString("es-PA", {
-                          dateStyle: "short",
-                          timeStyle: "short",
-                        })}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
-          ))}
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Stat label="Reservas" value={bookings.length} />
+              <Stat label="Horas" value={totalHours} />
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setDate(addDays(date, -1))}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18 9 12l6-6" />
+              </svg>
+              {fmtShort(addDays(date, -1))}
+            </button>
+            {!isToday && (
+              <button
+                onClick={() => setDate(today)}
+                className="rounded-xl bg-brand px-3 py-2 text-sm font-bold uppercase tracking-wider text-white shadow-glow transition hover:bg-brand-dark"
+              >
+                Hoy
+              </button>
+            )}
+            <button
+              onClick={() => setDate(addDays(date, 1))}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+            >
+              {fmtShort(addDays(date, 1))}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+            </button>
+            <div className="ml-auto">
+              <CalendarPopover value={date} onChange={setDate} buttonLabel="Otro día" />
+            </div>
+          </div>
         </div>
+      </section>
+
+      <main className="mx-auto max-w-6xl px-4 py-8">
+        {error && (
+          <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>
+        )}
+
+        {loading ? (
+          <div className="rounded-2xl bg-white p-10 text-center text-sm text-neutral-500 shadow-soft ring-1 ring-neutral-200/80">
+            Cargando…
+          </div>
+        ) : sorted.length === 0 ? (
+          <div className="rounded-2xl border-2 border-dashed border-neutral-300 bg-white p-12 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-400">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="18" height="18" x="3" y="4" rx="2" />
+                <path d="M16 2v4M8 2v4M3 10h18" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-neutral-700">Sin reservas para este día.</p>
+            <p className="mt-1 text-xs text-neutral-500">Selecciona otro día arriba para revisar otras fechas.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {sorted.map((b) => (
+              <article
+                key={b.id}
+                className="overflow-hidden rounded-2xl bg-white shadow-soft ring-1 ring-neutral-200/80"
+              >
+                <div className="flex flex-wrap items-center gap-3 border-b border-neutral-100 px-5 py-4">
+                  <div className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-ink-950 font-mono text-xs font-bold text-white">
+                    {String(b.start_hour).padStart(2, "0")}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-bold tracking-tight">
+                      {b.first_name} {b.last_name}
+                    </p>
+                    <p className="mt-0.5 text-xs text-neutral-500">
+                      <a href={`mailto:${b.email}`} className="hover:text-brand">{b.email}</a>
+                      <span className="mx-1.5 text-neutral-300">·</span>
+                      <a href={`tel:${b.phone.replace(/\s/g, "")}`} className="hover:text-brand">{b.phone}</a>
+                    </p>
+                  </div>
+                  <span className="rounded-lg bg-neutral-100 px-2.5 py-1 font-mono text-xs font-bold text-ink-950">
+                    {fmtHour(b.start_hour)} – {fmtHour(b.end_hour)}
+                  </span>
+                  <button
+                    onClick={() => removeBooking(b.id)}
+                    disabled={busyId === b.id}
+                    className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+                  >
+                    {busyId === b.id ? "…" : "Cancelar"}
+                  </button>
+                </div>
+                {b.topic && (
+                  <div className="bg-neutral-50 px-5 py-3">
+                    <p className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">
+                      Tema del podcast
+                    </p>
+                    <p className="text-sm whitespace-pre-wrap text-neutral-800">{b.topic}</p>
+                  </div>
+                )}
+                {b.terms_accepted_at && (
+                  <div className="border-t border-neutral-100 px-5 py-2 text-[11px] text-neutral-500">
+                    <span className="inline-flex items-center gap-1">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 6 9 17l-5-5" />
+                      </svg>
+                      Aceptó T&amp;C v{b.terms_version} ·{" "}
+                      {new Date(b.terms_accepted_at).toLocaleString("es-PA", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })}
+                    </span>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
       </main>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 backdrop-blur">
+      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-400">{label}</p>
+      <p className="mt-0.5 font-mono text-2xl font-black tabular-nums">{value}</p>
     </div>
   );
 }

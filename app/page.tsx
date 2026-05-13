@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Header from "@/components/Header";
+import Calendar from "@/components/Calendar";
 
 const OPEN_HOUR = 9;
 const CLOSE_HOUR = 18;
@@ -17,6 +18,15 @@ function todayInPanama(): string {
   const now = new Date();
   const panama = new Date(now.toLocaleString("en-US", { timeZone: "America/Panama" }));
   return panama.toISOString().slice(0, 10);
+}
+
+function formatLongDate(iso: string): string {
+  return new Date(iso + "T00:00").toLocaleDateString("es-PA", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 type Terms = { content: string; version: number };
@@ -146,52 +156,65 @@ export default function Page() {
   return (
     <>
       <Header />
-      <div className="bg-grid border-b border-neutral-200 bg-white">
-        <div className="mx-auto max-w-2xl px-4 py-10">
-          <div className="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-brand">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand" />
-            Reservas en línea
+
+      <section className="relative isolate overflow-hidden border-b border-neutral-200 bg-ink-950 text-white glow-red">
+        <div className="bg-grid-dark absolute inset-0 opacity-60" />
+        <div className="relative mx-auto max-w-5xl px-4 py-14 sm:py-20">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-300 backdrop-blur">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />
+            Reservas en línea · 9am a 6pm
           </div>
-          <h1 className="mt-3 text-3xl font-black tracking-tight md:text-5xl">
-            Reserva el <span className="text-brand">Podcast Studio</span>
+          <h1 className="mt-4 max-w-2xl text-4xl font-black leading-[1.05] tracking-tight md:text-6xl">
+            Podcast Studio
+            <span className="block text-brand">by Steren Panamá</span>
           </h1>
-          <p className="mt-2 max-w-lg text-sm text-neutral-600">
-            Sesiones disponibles de 9:00 am a 6:00 pm. Elige la fecha, las horas que necesitas y completa tus datos. Confirmación al instante.
+          <p className="mt-4 max-w-xl text-sm text-neutral-300 sm:text-base">
+            Reserva el espacio para grabar tu próximo episodio. Selecciona la fecha,
+            las horas que necesites y listo — confirmación al instante.
           </p>
         </div>
-      </div>
+      </section>
 
-      <main className="mx-auto max-w-2xl px-4 py-8">
+      <main className="mx-auto max-w-3xl px-4 py-10">
         {success && (
-          <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
-            <strong>¡Reserva confirmada!</strong>{" "}
-            {new Date(success.date + "T00:00").toLocaleDateString("es-PA", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}{" "}
-            · {success.hours.map(fmtHour).join(", ")}.
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+            <div className="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-full bg-emerald-500 text-white">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-bold">¡Reserva confirmada!</p>
+              <p className="mt-0.5">
+                {formatLongDate(success.date)} · {success.hours.map(fmtHour).join(", ")}
+              </p>
+            </div>
           </div>
         )}
 
-        <form onSubmit={submit} className="space-y-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-neutral-200">
-          <div>
-            <label className="mb-1 block text-sm font-medium">Fecha</label>
-            <input
-              type="date"
-              value={date}
-              min={today}
-              onChange={(e) => setDate(e.target.value)}
-              required
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-            />
-          </div>
+        <form onSubmit={submit} className="space-y-8">
+          <section className="rounded-3xl bg-white p-6 shadow-soft ring-1 ring-neutral-200/80">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand">Paso 1</p>
+                <h2 className="text-lg font-bold tracking-tight">Elige el día</h2>
+              </div>
+              <span className="hidden rounded-full bg-ink-950 px-3 py-1 text-[11px] font-semibold capitalize text-white sm:inline-block">
+                {formatLongDate(date)}
+              </span>
+            </div>
+            <Calendar value={date} onChange={setDate} min={today} />
+          </section>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium">
-              Horario {loadingAvailability && <span className="text-xs text-neutral-500">(cargando…)</span>}
-            </label>
+          <section className="rounded-3xl bg-white p-6 shadow-soft ring-1 ring-neutral-200/80">
+            <div className="mb-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand">Paso 2</p>
+              <h2 className="text-lg font-bold tracking-tight">
+                Selecciona las horas
+                {loadingAvailability && <span className="ml-2 text-xs font-medium text-neutral-500">cargando…</span>}
+              </h2>
+              <p className="mt-0.5 text-xs text-neutral-500">Bloques de 1 hora. Puedes elegir cuantos quieras.</p>
+            </div>
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-3">
               {ALL_HOURS.map((h) => {
                 const isTaken = taken.has(h);
@@ -203,12 +226,12 @@ export default function Page() {
                     disabled={isTaken || loadingAvailability}
                     onClick={() => toggleHour(h)}
                     className={[
-                      "rounded-lg border px-3 py-2 text-sm font-medium transition",
+                      "rounded-xl px-3 py-3 text-sm font-semibold transition",
                       isTaken
-                        ? "cursor-not-allowed border-neutral-200 bg-neutral-100 text-neutral-400 line-through"
+                        ? "cursor-not-allowed bg-neutral-100 text-neutral-400 line-through"
                         : isSelected
-                          ? "border-brand bg-brand text-white shadow"
-                          : "border-neutral-300 bg-white hover:border-brand hover:text-brand",
+                          ? "bg-brand text-white shadow-glow"
+                          : "border border-neutral-200 bg-white text-ink-950 hover:border-ink-950 hover:bg-ink-950 hover:text-white",
                     ].join(" ")}
                   >
                     {fmtHour(h)} – {fmtHour(h + 1)}
@@ -217,89 +240,96 @@ export default function Page() {
               })}
             </div>
             {sortedSelected.length > 0 && (
-              <p className="mt-2 text-xs text-neutral-600">
-                Seleccionado: {sortedSelected.map(fmtHour).join(", ")} ({sortedSelected.length} h)
-              </p>
+              <div className="mt-4 flex items-center justify-between rounded-xl bg-ink-950 px-4 py-2.5 text-xs text-white">
+                <span className="font-medium opacity-70">Seleccionado</span>
+                <span className="font-mono font-bold">
+                  {sortedSelected.map(fmtHour).join(" · ")} · {sortedSelected.length} h
+                </span>
+              </div>
             )}
-          </div>
+          </section>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium">Nombre</label>
-              <input
-                type="text"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
-                maxLength={60}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-              />
+          <section className="rounded-3xl bg-white p-6 shadow-soft ring-1 ring-neutral-200/80">
+            <div className="mb-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand">Paso 3</p>
+              <h2 className="text-lg font-bold tracking-tight">Tus datos</h2>
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Apellido</label>
-              <input
-                type="text"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
-                maxLength={60}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-              />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Nombre">
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  maxLength={60}
+                  className="input"
+                />
+              </Field>
+              <Field label="Apellido">
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  maxLength={60}
+                  className="input"
+                />
+              </Field>
+              <Field label="Correo">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="input"
+                />
+              </Field>
+              <Field label="Celular">
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                  placeholder="+507 6000-0000"
+                  className="input"
+                />
+              </Field>
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Correo</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Celular</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-                placeholder="+507 6000-0000"
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-              />
-            </div>
-          </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              ¿De qué van a hablar?
-              <span className="ml-1 text-xs font-normal text-neutral-500">
-                (tema, invitados, formato)
-              </span>
-            </label>
-            <textarea
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              required
-              minLength={10}
-              maxLength={800}
-              rows={3}
-              placeholder="Ej: Conversación sobre emprendimiento en Panamá con invitada Juana Pérez, fundadora de Acme. Formato entrevista, 45 minutos."
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-            />
-            <p className="mt-1 text-xs text-neutral-500">{topic.length}/800</p>
-          </div>
+            <div className="mt-4">
+              <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                ¿De qué van a hablar?
+              </label>
+              <textarea
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                required
+                minLength={10}
+                maxLength={800}
+                rows={3}
+                placeholder="Ej: Conversación sobre emprendimiento con Juana Pérez, fundadora de Acme."
+                className="input resize-none"
+              />
+              <p className="mt-1 text-right text-[11px] text-neutral-400">{topic.length}/800</p>
+            </div>
+          </section>
 
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <label className="block text-sm font-medium">Términos y condiciones</label>
+          <section className="rounded-3xl bg-white p-6 shadow-soft ring-1 ring-neutral-200/80">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand">Paso 4</p>
+                <h2 className="text-lg font-bold tracking-tight">Términos y condiciones</h2>
+              </div>
               {terms && (
-                <span className="text-xs text-neutral-500">Versión {terms.version}</span>
+                <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-[11px] font-mono font-semibold text-neutral-600">
+                  v{terms.version}
+                </span>
               )}
             </div>
-            <div className="max-h-48 overflow-y-auto rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-xs leading-relaxed text-neutral-700 whitespace-pre-wrap">
+            <div className="scroll-soft max-h-52 overflow-y-auto rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-xs leading-relaxed text-neutral-700 whitespace-pre-wrap">
               {terms ? terms.content : "Cargando términos…"}
             </div>
-            <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-lg border border-neutral-300 bg-white p-3 transition hover:border-brand/50">
+            <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-neutral-200 bg-white p-3 transition hover:border-ink-950">
               <input
                 type="checkbox"
                 checked={termsAccepted}
@@ -311,10 +341,10 @@ export default function Page() {
                 He leído y acepto los términos y condiciones del podcast studio de Steren Panamá.
               </span>
             </label>
-          </div>
+          </section>
 
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
               {error}
             </div>
           )}
@@ -322,15 +352,55 @@ export default function Page() {
           <button
             type="submit"
             disabled={submitting || loadingAvailability || !terms}
-            className="w-full rounded-lg bg-brand py-3 text-sm font-semibold text-white shadow transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
+            className="group relative w-full overflow-hidden rounded-2xl bg-ink-950 px-6 py-4 text-sm font-bold uppercase tracking-[0.15em] text-white shadow-soft transition hover:bg-brand disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitting ? "Reservando…" : "Confirmar reserva"}
+            <span className="relative z-10 inline-flex items-center justify-center gap-2">
+              {submitting ? "Reservando…" : "Confirmar reserva"}
+              {!submitting && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition group-hover:translate-x-1">
+                  <path d="M5 12h14M13 5l7 7-7 7" />
+                </svg>
+              )}
+            </span>
           </button>
         </form>
       </main>
-      <footer className="mx-auto max-w-5xl px-4 py-8 text-center text-xs text-neutral-500">
-        © {new Date().getFullYear()} Steren Panamá · Podcast Studio
+
+      <footer className="border-t border-neutral-200 bg-white">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs text-neutral-500">
+          <span>© {new Date().getFullYear()} Steren Panamá</span>
+          <span className="font-medium uppercase tracking-widest">Podcast Studio</span>
+        </div>
       </footer>
+
+      <style jsx>{`
+        :global(.input) {
+          width: 100%;
+          border-radius: 0.75rem;
+          border: 1px solid #e5e5e5;
+          background: white;
+          padding: 0.625rem 0.875rem;
+          font-size: 0.875rem;
+          color: #06070a;
+          transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        :global(.input:focus) {
+          outline: none;
+          border-color: #06070a;
+          box-shadow: 0 0 0 3px rgba(6, 7, 10, 0.08);
+        }
+      `}</style>
     </>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+        {label}
+      </label>
+      {children}
+    </div>
   );
 }
