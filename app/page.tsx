@@ -172,6 +172,18 @@ export default function Page() {
             Reserva el espacio para grabar tu próximo episodio. Selecciona la fecha,
             las horas que necesites y listo — confirmación al instante.
           </p>
+          <a
+            href="https://maps.app.goo.gl/ipWEW9FY3e3TRyKW6"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs font-medium text-white backdrop-blur transition hover:bg-white/10"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 10c0 7-8 13-8 13s-8-6-8-13a8 8 0 0 1 16 0Z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            Sucursal Villa Lucre · ver en mapa
+          </a>
         </div>
       </section>
 
@@ -364,11 +376,42 @@ export default function Page() {
             </span>
           </button>
         </form>
+
+        <section className="mt-10 overflow-hidden rounded-3xl bg-ink-950 text-white shadow-soft">
+          <div className="grid gap-0 sm:grid-cols-[auto_1fr]">
+            <div className="flex items-center justify-center bg-brand p-6 sm:p-8">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 10c0 7-8 13-8 13s-8-6-8-13a8 8 0 0 1 16 0Z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+            </div>
+            <div className="p-6 sm:p-7">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-300">Ubicación</p>
+              <h3 className="mt-1 text-xl font-black tracking-tight">Steren Villa Lucre</h3>
+              <p className="mt-2 text-sm leading-relaxed text-neutral-300">
+                Urbanización Villa Lucre, Plaza Villa Lucre, entre el Supermercado Rey y Farmacia El Javillo,
+                frente a La Onda. San Miguelito, Vía Domingo Díaz.
+              </p>
+              <a
+                href="https://maps.app.goo.gl/ipWEW9FY3e3TRyKW6"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-ink-950 transition hover:bg-brand hover:text-white"
+              >
+                Cómo llegar
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M7 17 17 7" />
+                  <path d="M7 7h10v10" />
+                </svg>
+              </a>
+            </div>
+          </div>
+        </section>
       </main>
 
       <footer className="border-t border-neutral-200 bg-white">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs text-neutral-500">
-          <span>© {new Date().getFullYear()} Steren Panamá</span>
+          <span>© {new Date().getFullYear()} Steren Panamá · Sucursal Villa Lucre</span>
           <span className="font-medium uppercase tracking-widest">Podcast Studio</span>
         </div>
       </footer>
