@@ -13,6 +13,7 @@ const WHATSAPP_NUMBER = "50766663080";
 const WHATSAPP_DISPLAY = "+507 6666-3080";
 
 import { signCancelToken } from "./cancel-token";
+import { socialDisplay, socialHref, type Socials } from "./socials";
 
 export type BookingPayload = {
   firstName: string;
@@ -23,6 +24,7 @@ export type BookingPayload = {
   hours: number[];
   topic: string;
   groupId?: string;
+  socials?: Socials;
 };
 
 type BrevoRecipient = { email: string; name?: string };
@@ -174,6 +176,29 @@ function detailsCardHtml(b: BookingPayload) {
   </table>`;
 }
 
+function socialsHtml(s?: Socials | null): string {
+  if (!s) return "";
+  type Item = { label: string; platform: "youtube" | "instagram" | "tiktok" | "other"; value: string };
+  const items: Item[] = [];
+  if (s.youtube) items.push({ label: "YouTube", platform: "youtube", value: s.youtube });
+  if (s.instagram) items.push({ label: "Instagram", platform: "instagram", value: s.instagram });
+  if (s.tiktok) items.push({ label: "TikTok", platform: "tiktok", value: s.tiktok });
+  if (s.other) items.push({ label: "Otra", platform: "other", value: s.other });
+  if (items.length === 0) return "";
+  const rows = items
+    .map(
+      (it) =>
+        `<tr><td style="padding:4px 0;font-size:12px;color:#737373;width:80px;font-weight:600;">${escape(it.label)}</td><td style="padding:4px 0;font-size:13px;"><a href="${escape(socialHref(it.platform, it.value))}" target="_blank" style="color:${BRAND_HEX};text-decoration:none;">${escape(socialDisplay(it.value))}</a></td></tr>`
+    )
+    .join("");
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fafafa;border:1px solid #e5e5e5;border-radius:14px;margin-top:12px;">
+    <tr><td style="padding:14px 18px;">
+      <p style="margin:0 0 8px 0;font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:#737373;">Redes sociales</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>
+    </td></tr>
+  </table>`;
+}
+
 export async function sendBookingConfirmation(b: BookingPayload) {
   let cancelCellHtml = "";
   if (b.groupId) {
@@ -227,6 +252,7 @@ export async function sendBookingConfirmation(b: BookingPayload) {
           </p>
         </td></tr>
       </table>
+      ${socialsHtml(b.socials)}
       <p style="margin:18px 0 0 0;">
         <a href="${SITE_URL}/admin" style="display:inline-block;background:${BRAND_HEX};color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;">Abrir panel</a>
       </p>`,

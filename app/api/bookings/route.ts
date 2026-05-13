@@ -17,6 +17,10 @@ type Body = {
   topic?: string;
   termsVersion?: number;
   termsAccepted?: boolean;
+  socialYoutube?: string;
+  socialInstagram?: string;
+  socialTiktok?: string;
+  socialOther?: string;
 };
 
 function clean(s: unknown, max = 120) {
@@ -37,6 +41,10 @@ export async function POST(req: Request) {
   const phone = clean(body.phone, 30);
   const date = clean(body.date, 10);
   const topic = clean(body.topic, 800);
+  const socialYoutube = clean(body.socialYoutube, 200);
+  const socialInstagram = clean(body.socialInstagram, 200);
+  const socialTiktok = clean(body.socialTiktok, 200);
+  const socialOther = clean(body.socialOther, 200);
   const hours = Array.isArray(body.hours)
     ? body.hours.filter((h): h is number => Number.isInteger(h)).sort((a, b) => a - b)
     : [];
@@ -133,13 +141,21 @@ export async function POST(req: Request) {
   const groupId = crypto.randomUUID();
   for (const r of ranges) {
     await sql`
-      INSERT INTO bookings (first_name, last_name, email, phone, booking_date, start_hour, end_hour, topic, terms_version, terms_accepted_at, group_id)
-      VALUES (${firstName}, ${lastName}, ${email}, ${phone}, ${date}, ${r.start}, ${r.end}, ${topic}, ${terms.version}, NOW(), ${groupId})
+      INSERT INTO bookings (first_name, last_name, email, phone, booking_date, start_hour, end_hour, topic, terms_version, terms_accepted_at, group_id, social_youtube, social_instagram, social_tiktok, social_other)
+      VALUES (${firstName}, ${lastName}, ${email}, ${phone}, ${date}, ${r.start}, ${r.end}, ${topic}, ${terms.version}, NOW(), ${groupId}, ${socialYoutube || null}, ${socialInstagram || null}, ${socialTiktok || null}, ${socialOther || null})
     `;
   }
 
   try {
-    await sendBookingConfirmation({ firstName, lastName, email, phone, date, hours, topic, groupId });
+    await sendBookingConfirmation({
+      firstName, lastName, email, phone, date, hours, topic, groupId,
+      socials: {
+        youtube: socialYoutube || null,
+        instagram: socialInstagram || null,
+        tiktok: socialTiktok || null,
+        other: socialOther || null,
+      },
+    });
   } catch (e) {
     console.error("Email confirmation failed:", e);
   }

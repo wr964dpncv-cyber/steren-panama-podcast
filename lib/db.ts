@@ -34,6 +34,10 @@ export async function ensureSchema() {
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS terms_accepted_at TIMESTAMPTZ`;
   await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS group_id TEXT`;
   await sql`CREATE INDEX IF NOT EXISTS bookings_group_idx ON bookings (group_id)`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS social_youtube TEXT`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS social_instagram TEXT`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS social_tiktok TEXT`;
+  await sql`ALTER TABLE bookings ADD COLUMN IF NOT EXISTS social_other TEXT`;
 
   await sql`
     CREATE TABLE IF NOT EXISTS app_settings (

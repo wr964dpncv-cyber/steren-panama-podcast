@@ -16,7 +16,30 @@ type Booking = {
   terms_version: number;
   terms_accepted_at: string | null;
   created_at: string;
+  social_youtube: string | null;
+  social_instagram: string | null;
+  social_tiktok: string | null;
+  social_other: string | null;
 };
+
+function socialHref(platform: "youtube" | "instagram" | "tiktok" | "other", raw: string): string {
+  const v = raw.trim();
+  if (!v) return "";
+  if (/^https?:\/\//i.test(v)) return v;
+  if (platform === "other") {
+    if (/^[\w.-]+\.[a-z]{2,}/i.test(v)) return `https://${v}`;
+    return v;
+  }
+  const handle = v.replace(/^@/, "").replace(/\s+/g, "");
+  if (platform === "youtube") return `https://www.youtube.com/@${handle}`;
+  if (platform === "instagram") return `https://instagram.com/${handle}`;
+  if (platform === "tiktok") return `https://www.tiktok.com/@${handle}`;
+  return v;
+}
+
+function socialDisplay(raw: string): string {
+  return raw.trim().replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
+}
 
 function fmtHour(h: number) {
   const period = h >= 12 ? "pm" : "am";
@@ -295,6 +318,7 @@ export default function AllBookingsPage() {
                             <span className="font-semibold text-neutral-500">Tema:</span> {b.topic}
                           </p>
                         )}
+                        <SocialChips booking={b} />
                       </li>
                     ))}
                   </ul>
@@ -310,6 +334,32 @@ export default function AllBookingsPage() {
         )}
       </main>
     </AdminShell>
+  );
+}
+
+function SocialChips({ booking: b }: { booking: Booking }) {
+  type Item = { label: string; platform: "youtube" | "instagram" | "tiktok" | "other"; value: string; bg: string };
+  const items: Item[] = [];
+  if (b.social_youtube) items.push({ label: "YouTube", platform: "youtube", value: b.social_youtube, bg: "bg-red-50 text-red-700 hover:bg-red-100" });
+  if (b.social_instagram) items.push({ label: "Instagram", platform: "instagram", value: b.social_instagram, bg: "bg-pink-50 text-pink-700 hover:bg-pink-100" });
+  if (b.social_tiktok) items.push({ label: "TikTok", platform: "tiktok", value: b.social_tiktok, bg: "bg-neutral-100 text-neutral-800 hover:bg-neutral-200" });
+  if (b.social_other) items.push({ label: "Otra", platform: "other", value: b.social_other, bg: "bg-brand/10 text-brand-700 hover:bg-brand/20" });
+  if (items.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {items.map((it) => (
+        <a
+          key={it.label}
+          href={socialHref(it.platform, it.value)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${it.bg}`}
+        >
+          <span className="font-bold">{it.label}</span>
+          <span className="opacity-80">{socialDisplay(it.value)}</span>
+        </a>
+      ))}
+    </div>
   );
 }
 
