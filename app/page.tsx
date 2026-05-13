@@ -200,22 +200,6 @@ export default function Page() {
       </section>
 
       <main className="mx-auto max-w-3xl px-4 py-10">
-        {success && (
-          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-            <div className="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-full bg-emerald-500 text-white">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-            </div>
-            <div>
-              <p className="font-bold">¡Reserva confirmada!</p>
-              <p className="mt-0.5">
-                {formatLongDate(success.date)} · {success.hours.map(fmtHour).join(", ")}
-              </p>
-            </div>
-          </div>
-        )}
-
         <form onSubmit={submit} className="space-y-8">
           <section className="rounded-3xl bg-white p-6 shadow-soft ring-1 ring-neutral-200/80">
             <div className="mb-4 flex items-center justify-between gap-3">
@@ -374,6 +358,22 @@ export default function Page() {
               </span>
             </label>
           </section>
+
+          {success && (
+            <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+              <div className="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-full bg-emerald-500 text-white">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-bold">¡Reserva confirmada!</p>
+                <p className="mt-0.5">
+                  {formatLongDate(success.date)} · {success.hours.map(fmtHour).join(", ")}
+                </p>
+              </div>
+            </div>
+          )}
 
           {error && (
             <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
