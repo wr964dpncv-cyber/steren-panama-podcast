@@ -35,8 +35,10 @@ Steren Panamá pone a disposición su podcast studio sin costo monetario directo
 6.1. Las cancelaciones deben informarse con al menos 24 horas de anticipación al correo o número facilitado por Steren Panamá.
 6.2. La inasistencia sin aviso podrá resultar en la suspensión del derecho a reservar nuevamente.
 
-7. DERECHO DE ADMISIÓN
+7. DERECHO DE ADMISIÓN Y CANCELACIÓN POR STEREN
 7.1. Steren Panamá se reserva el derecho de cancelar cualquier reserva si considera que el contenido propuesto, el comportamiento del creador o el cumplimiento de estos términos no se ajustan a los valores de la marca, sin que ello genere obligación de compensación.
+7.2. Steren Panamá podrá cancelar, modificar o reprogramar cualquier reserva confirmada en cualquier momento, a su entera discreción, con o sin previo aviso y sin necesidad de justificación, por motivos operativos, comerciales, de fuerza mayor o de cualquier otra naturaleza. Esta cancelación no generará derecho a compensación, indemnización ni reembolso de ningún tipo, dado que el uso del studio es a título gratuito.
+7.3. En caso de cancelación por parte de Steren Panamá, se procurará notificar al creador por correo electrónico, mensaje de WhatsApp al número facilitado o llamada telefónica, según las posibilidades del momento.
 
 8. PROTECCIÓN DE DATOS
 8.1. Los datos personales facilitados serán utilizados únicamente para la gestión de la reserva y comunicaciones operativas con el creador.

@@ -130,15 +130,16 @@ export async function POST(req: Request) {
     else ranges.push({ start: h, end: h + 1 });
   }
 
+  const groupId = crypto.randomUUID();
   for (const r of ranges) {
     await sql`
-      INSERT INTO bookings (first_name, last_name, email, phone, booking_date, start_hour, end_hour, topic, terms_version, terms_accepted_at)
-      VALUES (${firstName}, ${lastName}, ${email}, ${phone}, ${date}, ${r.start}, ${r.end}, ${topic}, ${terms.version}, NOW())
+      INSERT INTO bookings (first_name, last_name, email, phone, booking_date, start_hour, end_hour, topic, terms_version, terms_accepted_at, group_id)
+      VALUES (${firstName}, ${lastName}, ${email}, ${phone}, ${date}, ${r.start}, ${r.end}, ${topic}, ${terms.version}, NOW(), ${groupId})
     `;
   }
 
   try {
-    await sendBookingConfirmation({ firstName, lastName, email, phone, date, hours, topic });
+    await sendBookingConfirmation({ firstName, lastName, email, phone, date, hours, topic, groupId });
   } catch (e) {
     console.error("Email confirmation failed:", e);
   }

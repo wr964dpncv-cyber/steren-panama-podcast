@@ -10,6 +10,10 @@ const LOGO_URL = "https://www.steren.com.pa/media/logo/stores/1/logo_2.png";
 const MAP_URL = "https://maps.app.goo.gl/ipWEW9FY3e3TRyKW6";
 const SITE_URL = process.env.PUBLIC_SITE_URL || "https://steren-panama-podcast.vercel.app";
 const BRAND_HEX = "#00B3E3";
+const WHATSAPP_NUMBER = "50766663080";
+const WHATSAPP_DISPLAY = "+507 6666-3080";
+
+import { signCancelToken } from "./cancel-token";
 
 export type BookingPayload = {
   firstName: string;
@@ -19,6 +23,7 @@ export type BookingPayload = {
   date: string;
   hours: number[];
   topic: string;
+  groupId?: string;
 };
 
 type BrevoRecipient = { email: string; name?: string };
@@ -162,6 +167,20 @@ function detailsCardHtml(b: BookingPayload) {
 }
 
 export async function sendBookingConfirmation(b: BookingPayload) {
+  let cancelButtonHtml = "";
+  if (b.groupId) {
+    const token = await signCancelToken(b.groupId, b.email);
+    if (token) {
+      const cancelUrl = `${SITE_URL}/cancelar?token=${encodeURIComponent(token)}`;
+      cancelButtonHtml = `
+        <a href="${cancelUrl}" style="display:inline-block;background:#dc2626;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;margin-right:6px;">Cancelar reserva</a>`;
+    }
+  }
+  const whatsappMsg = encodeURIComponent(
+    `Hola, soy ${b.firstName} ${b.lastName}. Tengo una reserva del Podcast Studio para ${fmtDateLong(b.date)} (${fmtSlots(b.hours)}).`
+  );
+  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${whatsappMsg}`;
+
   const clientHtml = shellHtml({
     preheader: `Tu reserva del podcast studio está confirmada para ${fmtDateLong(b.date)}.`,
     badge: "Reserva confirmada",
@@ -171,14 +190,15 @@ export async function sendBookingConfirmation(b: BookingPayload) {
     body:
       detailsCardHtml(b) +
       `<p style="margin:18px 0 6px 0;font-size:13px;color:#525252;line-height:1.55;">
-        Recuerda llegar 5 minutos antes. Si tienes que cancelar, hazlo con al menos 24 h de anticipación respondiendo a este correo.
+        Recuerda llegar 5 minutos antes. Si necesitas cambiar o cancelar tu reserva, usa el botón de abajo o escríbenos por WhatsApp.
       </p>
       <p style="margin:0;font-size:12px;color:#737373;line-height:1.5;">
         Al reservar aceptaste los términos y condiciones del studio: el contenido grabado debe respetar la línea de marca y los productos / logos Steren visibles en el set.
       </p>
-      <p style="margin:18px 0 0 0;">
-        <a href="${SITE_URL}" style="display:inline-block;background:#06070a;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;">Ver studio</a>
-      </p>`,
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:20px;"><tr>
+        <td style="padding-right:6px;">${cancelButtonHtml}</td>
+        <td><a href="${whatsappUrl}" style="display:inline-block;background:#25D366;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;">WhatsApp ${WHATSAPP_DISPLAY}</a></td>
+      </tr></table>`,
   });
 
   const adminHtml = shellHtml({
@@ -225,6 +245,11 @@ export async function sendBookingConfirmation(b: BookingPayload) {
 }
 
 export async function sendBookingCancellation(b: BookingPayload) {
+  const cancelWhatsAppMsg = encodeURIComponent(
+    `Hola, soy ${b.firstName} ${b.lastName}. Mi reserva del ${fmtDateLong(b.date)} fue cancelada y quería preguntar.`
+  );
+  const cancelWhatsAppUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${cancelWhatsAppMsg}`;
+
   const clientHtml = shellHtml({
     preheader: `Tu reserva del podcast studio para ${fmtDateLong(b.date)} ha sido cancelada.`,
     badge: "Reserva cancelada",
@@ -234,11 +259,12 @@ export async function sendBookingCancellation(b: BookingPayload) {
     body:
       detailsCardHtml(b) +
       `<p style="margin:18px 0 0 0;font-size:13px;color:#525252;line-height:1.55;">
-        Si quieres reagendar para otra fecha, puedes hacerlo desde el sitio o respondiendo a este correo.
+        Si quieres reagendar, puedes reservar otra fecha en el sitio o escribirnos por WhatsApp.
       </p>
-      <p style="margin:14px 0 0 0;">
-        <a href="${SITE_URL}" style="display:inline-block;background:#06070a;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;">Reservar otra fecha</a>
-      </p>`,
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:14px;"><tr>
+        <td style="padding-right:6px;"><a href="${SITE_URL}" style="display:inline-block;background:#06070a;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;">Reservar otra fecha</a></td>
+        <td><a href="${cancelWhatsAppUrl}" style="display:inline-block;background:#25D366;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;">WhatsApp ${WHATSAPP_DISPLAY}</a></td>
+      </tr></table>`,
   });
 
   const adminHtml = shellHtml({
