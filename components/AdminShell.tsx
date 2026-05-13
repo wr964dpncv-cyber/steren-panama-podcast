@@ -6,7 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 type Me = { id: number; email: string; name: string; is_super_admin: boolean };
 
 const NAV: { href: string; label: string; superAdminOnly?: boolean }[] = [
-  { href: "/admin", label: "Reservas" },
+  { href: "/admin", label: "Hoy" },
+  { href: "/admin/todas", label: "Todas" },
   { href: "/admin/dias-bloqueados", label: "Días bloqueados" },
   { href: "/admin/terminos", label: "Términos" },
   { href: "/admin/usuarios", label: "Usuarios", superAdminOnly: true },
