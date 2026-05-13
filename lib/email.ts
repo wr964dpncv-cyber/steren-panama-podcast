@@ -167,13 +167,12 @@ function detailsCardHtml(b: BookingPayload) {
 }
 
 export async function sendBookingConfirmation(b: BookingPayload) {
-  let cancelButtonHtml = "";
+  let cancelCellHtml = "";
   if (b.groupId) {
     const token = await signCancelToken(b.groupId, b.email);
     if (token) {
       const cancelUrl = `${SITE_URL}/cancelar?token=${encodeURIComponent(token)}`;
-      cancelButtonHtml = `
-        <a href="${cancelUrl}" style="display:inline-block;background:#dc2626;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;margin-right:6px;">Cancelar reserva</a>`;
+      cancelCellHtml = `<td style="padding-right:8px;"><a href="${cancelUrl}" style="display:inline-block;background:#ffffff;color:#dc2626;border:1px solid #fecaca;font-size:11px;font-weight:600;letter-spacing:0.04em;padding:8px 14px;border-radius:9999px;text-decoration:none;">Cancelar reserva</a></td>`;
     }
   }
   const whatsappMsg = encodeURIComponent(
@@ -190,15 +189,16 @@ export async function sendBookingConfirmation(b: BookingPayload) {
     body:
       detailsCardHtml(b) +
       `<p style="margin:18px 0 6px 0;font-size:13px;color:#525252;line-height:1.55;">
-        Recuerda llegar 5 minutos antes. Si necesitas cambiar o cancelar tu reserva, usa el botón de abajo o escríbenos por WhatsApp.
+        Recuerda llegar 5 minutos antes. Si necesitas cambiar o cancelar tu reserva, usa los botones de abajo.
       </p>
       <p style="margin:0;font-size:12px;color:#737373;line-height:1.5;">
         Al reservar aceptaste los términos y condiciones del studio: el contenido grabado debe respetar la línea de marca y los productos / logos Steren visibles en el set.
       </p>
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:20px;"><tr>
-        <td style="padding-right:6px;">${cancelButtonHtml}</td>
-        <td><a href="${whatsappUrl}" style="display:inline-block;background:#25D366;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;">WhatsApp ${WHATSAPP_DISPLAY}</a></td>
-      </tr></table>`,
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:18px;"><tr>
+        ${cancelCellHtml}
+        <td><a href="${whatsappUrl}" style="display:inline-block;background:#25D366;color:#ffffff;font-size:11px;font-weight:600;letter-spacing:0.04em;padding:9px 14px;border-radius:9999px;text-decoration:none;">WhatsApp</a></td>
+      </tr></table>
+      <p style="margin:10px 0 0 0;font-size:11px;color:#a3a3a3;">Steren Villa Lucre · ${WHATSAPP_DISPLAY}</p>`,
   });
 
   const adminHtml = shellHtml({
@@ -259,12 +259,13 @@ export async function sendBookingCancellation(b: BookingPayload) {
     body:
       detailsCardHtml(b) +
       `<p style="margin:18px 0 0 0;font-size:13px;color:#525252;line-height:1.55;">
-        Si quieres reagendar, puedes reservar otra fecha en el sitio o escribirnos por WhatsApp.
+        Si quieres reagendar, puedes reservar otra fecha o escribirnos por WhatsApp.
       </p>
       <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:14px;"><tr>
-        <td style="padding-right:6px;"><a href="${SITE_URL}" style="display:inline-block;background:#06070a;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;">Reservar otra fecha</a></td>
-        <td><a href="${cancelWhatsAppUrl}" style="display:inline-block;background:#25D366;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;">WhatsApp ${WHATSAPP_DISPLAY}</a></td>
-      </tr></table>`,
+        <td style="padding-right:8px;"><a href="${SITE_URL}" style="display:inline-block;background:#06070a;color:#ffffff;font-size:11px;font-weight:600;letter-spacing:0.04em;padding:9px 14px;border-radius:9999px;text-decoration:none;">Reservar otra fecha</a></td>
+        <td><a href="${cancelWhatsAppUrl}" style="display:inline-block;background:#25D366;color:#ffffff;font-size:11px;font-weight:600;letter-spacing:0.04em;padding:9px 14px;border-radius:9999px;text-decoration:none;">WhatsApp</a></td>
+      </tr></table>
+      <p style="margin:10px 0 0 0;font-size:11px;color:#a3a3a3;">Steren Villa Lucre · ${WHATSAPP_DISPLAY}</p>`,
   });
 
   const adminHtml = shellHtml({
