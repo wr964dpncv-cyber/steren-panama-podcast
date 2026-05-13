@@ -18,6 +18,9 @@ export async function GET(req: Request) {
     booking_date: string;
     start_hour: number;
     end_hour: number;
+    topic: string;
+    terms_version: number;
+    terms_accepted_at: string | null;
     created_at: string;
   };
 
@@ -26,7 +29,7 @@ export async function GET(req: Request) {
     ({ rows } = await sql<Row>`
       SELECT id, first_name, last_name, email, phone,
              TO_CHAR(booking_date, 'YYYY-MM-DD') AS booking_date,
-             start_hour, end_hour, created_at
+             start_hour, end_hour, topic, terms_version, terms_accepted_at, created_at
       FROM bookings
       WHERE booking_date BETWEEN ${from} AND ${to}
       ORDER BY booking_date, start_hour
@@ -35,7 +38,7 @@ export async function GET(req: Request) {
     ({ rows } = await sql<Row>`
       SELECT id, first_name, last_name, email, phone,
              TO_CHAR(booking_date, 'YYYY-MM-DD') AS booking_date,
-             start_hour, end_hour, created_at
+             start_hour, end_hour, topic, terms_version, terms_accepted_at, created_at
       FROM bookings
       ORDER BY booking_date DESC, start_hour
       LIMIT 500

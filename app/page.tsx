@@ -19,6 +19,8 @@ function todayInPanama(): string {
   return panama.toISOString().slice(0, 10);
 }
 
+type Terms = { content: string; version: number };
+
 export default function Page() {
   const today = useMemo(todayInPanama, []);
   const [date, setDate] = useState<string>(today);
@@ -28,10 +30,29 @@ export default function Page() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [topic, setTopic] = useState("");
+  const [terms, setTerms] = useState<Terms | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<{ date: string; hours: number[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/terms", { cache: "no-store" });
+        const data = await r.json();
+        if (!cancelled && r.ok) setTerms({ content: data.content, version: data.version });
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,6 +96,14 @@ export default function Page() {
       setError("Selecciona al menos una hora.");
       return;
     }
+    if (!termsAccepted) {
+      setError("Debes aceptar los términos y condiciones.");
+      return;
+    }
+    if (!terms) {
+      setError("No se pudieron cargar los términos. Recarga la página.");
+      return;
+    }
     setSubmitting(true);
     try {
       const r = await fetch("/api/bookings", {
@@ -86,7 +115,10 @@ export default function Page() {
           email,
           phone,
           date,
+          topic,
           hours: Array.from(selected).sort((a, b) => a - b),
+          termsVersion: terms.version,
+          termsAccepted: true,
         }),
       });
       const data = await r.json();
@@ -97,6 +129,8 @@ export default function Page() {
       setLastName("");
       setEmail("");
       setPhone("");
+      setTopic("");
+      setTermsAccepted(false);
       const refresh = await fetch(`/api/availability?date=${date}`, { cache: "no-store" });
       const ref = await refresh.json();
       if (refresh.ok) setTaken(new Set<number>(ref.takenHours ?? []));
@@ -128,123 +162,171 @@ export default function Page() {
       </div>
 
       <main className="mx-auto max-w-2xl px-4 py-8">
-
-      {success && (
-        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
-          <strong>¡Reserva confirmada!</strong> {new Date(success.date + "T00:00").toLocaleDateString("es-PA", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} ·{" "}
-          {success.hours.map(fmtHour).join(", ")}.
-        </div>
-      )}
-
-      <form onSubmit={submit} className="space-y-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-neutral-200">
-        <div>
-          <label className="mb-1 block text-sm font-medium">Fecha</label>
-          <input
-            type="date"
-            value={date}
-            min={today}
-            onChange={(e) => setDate(e.target.value)}
-            required
-            className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-          />
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm font-medium">
-            Horario {loadingAvailability && <span className="text-xs text-neutral-500">(cargando…)</span>}
-          </label>
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-3">
-            {ALL_HOURS.map((h) => {
-              const isTaken = taken.has(h);
-              const isSelected = selected.has(h);
-              return (
-                <button
-                  key={h}
-                  type="button"
-                  disabled={isTaken || loadingAvailability}
-                  onClick={() => toggleHour(h)}
-                  className={[
-                    "rounded-lg border px-3 py-2 text-sm font-medium transition",
-                    isTaken
-                      ? "cursor-not-allowed border-neutral-200 bg-neutral-100 text-neutral-400 line-through"
-                      : isSelected
-                        ? "border-brand bg-brand text-white shadow"
-                        : "border-neutral-300 bg-white hover:border-brand hover:text-brand",
-                  ].join(" ")}
-                >
-                  {fmtHour(h)} – {fmtHour(h + 1)}
-                </button>
-              );
-            })}
-          </div>
-          {sortedSelected.length > 0 && (
-            <p className="mt-2 text-xs text-neutral-600">
-              Seleccionado: {sortedSelected.map(fmtHour).join(", ")} ({sortedSelected.length} h)
-            </p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium">Nombre</label>
-            <input
-              type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-              maxLength={60}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Apellido</label>
-            <input
-              type="text"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-              maxLength={60}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Correo</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Celular</label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-              placeholder="+507 6000-0000"
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
-            />
-          </div>
-        </div>
-
-        {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-            {error}
+        {success && (
+          <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+            <strong>¡Reserva confirmada!</strong>{" "}
+            {new Date(success.date + "T00:00").toLocaleDateString("es-PA", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}{" "}
+            · {success.hours.map(fmtHour).join(", ")}.
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={submitting || loadingAvailability}
-          className="w-full rounded-lg bg-brand py-3 text-sm font-semibold text-white shadow transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {submitting ? "Reservando…" : "Confirmar reserva"}
-        </button>
-      </form>
+        <form onSubmit={submit} className="space-y-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-neutral-200">
+          <div>
+            <label className="mb-1 block text-sm font-medium">Fecha</label>
+            <input
+              type="date"
+              value={date}
+              min={today}
+              onChange={(e) => setDate(e.target.value)}
+              required
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+            />
+          </div>
 
+          <div>
+            <label className="mb-2 block text-sm font-medium">
+              Horario {loadingAvailability && <span className="text-xs text-neutral-500">(cargando…)</span>}
+            </label>
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-3">
+              {ALL_HOURS.map((h) => {
+                const isTaken = taken.has(h);
+                const isSelected = selected.has(h);
+                return (
+                  <button
+                    key={h}
+                    type="button"
+                    disabled={isTaken || loadingAvailability}
+                    onClick={() => toggleHour(h)}
+                    className={[
+                      "rounded-lg border px-3 py-2 text-sm font-medium transition",
+                      isTaken
+                        ? "cursor-not-allowed border-neutral-200 bg-neutral-100 text-neutral-400 line-through"
+                        : isSelected
+                          ? "border-brand bg-brand text-white shadow"
+                          : "border-neutral-300 bg-white hover:border-brand hover:text-brand",
+                    ].join(" ")}
+                  >
+                    {fmtHour(h)} – {fmtHour(h + 1)}
+                  </button>
+                );
+              })}
+            </div>
+            {sortedSelected.length > 0 && (
+              <p className="mt-2 text-xs text-neutral-600">
+                Seleccionado: {sortedSelected.map(fmtHour).join(", ")} ({sortedSelected.length} h)
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium">Nombre</label>
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+                maxLength={60}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Apellido</label>
+              <input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+                maxLength={60}
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Correo</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Celular</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+                placeholder="+507 6000-0000"
+                className="w-full rounded-lg border border-neutral-300 px-3 py-2 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">
+              ¿De qué van a hablar?
+              <span className="ml-1 text-xs font-normal text-neutral-500">
+                (tema, invitados, formato)
+              </span>
+            </label>
+            <textarea
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              required
+              minLength={10}
+              maxLength={800}
+              rows={3}
+              placeholder="Ej: Conversación sobre emprendimiento en Panamá con invitada Juana Pérez, fundadora de Acme. Formato entrevista, 45 minutos."
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+            />
+            <p className="mt-1 text-xs text-neutral-500">{topic.length}/800</p>
+          </div>
+
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="block text-sm font-medium">Términos y condiciones</label>
+              {terms && (
+                <span className="text-xs text-neutral-500">Versión {terms.version}</span>
+              )}
+            </div>
+            <div className="max-h-48 overflow-y-auto rounded-lg border border-neutral-200 bg-neutral-50 p-4 text-xs leading-relaxed text-neutral-700 whitespace-pre-wrap">
+              {terms ? terms.content : "Cargando términos…"}
+            </div>
+            <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-lg border border-neutral-300 bg-white p-3 transition hover:border-brand/50">
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                required
+                className="mt-0.5 h-4 w-4 cursor-pointer accent-brand"
+              />
+              <span className="text-sm">
+                He leído y acepto los términos y condiciones del podcast studio de Steren Panamá.
+              </span>
+            </label>
+          </div>
+
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={submitting || loadingAvailability || !terms}
+            className="w-full rounded-lg bg-brand py-3 text-sm font-semibold text-white shadow transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? "Reservando…" : "Confirmar reserva"}
+          </button>
+        </form>
       </main>
       <footer className="mx-auto max-w-5xl px-4 py-8 text-center text-xs text-neutral-500">
         © {new Date().getFullYear()} Steren Panamá · Podcast Studio

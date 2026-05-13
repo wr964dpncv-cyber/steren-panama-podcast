@@ -12,6 +12,9 @@ type Booking = {
   booking_date: string;
   start_hour: number;
   end_hour: number;
+  topic: string;
+  terms_version: number;
+  terms_accepted_at: string | null;
   created_at: string;
 };
 
@@ -113,6 +116,12 @@ export default function AdminPage() {
           </div>
           <div className="flex items-center gap-2">
             <a
+              href="/admin/terminos"
+              className="rounded-full border border-neutral-700 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-300 transition hover:bg-neutral-900"
+            >
+              Editar T&amp;C
+            </a>
+            <a
               href="/"
               className="rounded-full border border-neutral-700 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-300 transition hover:bg-neutral-900"
             >
@@ -199,29 +208,48 @@ export default function AdminPage() {
               </div>
               <div className="divide-y divide-neutral-100">
                 {items.map((b) => (
-                  <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold">
-                        {b.first_name} {b.last_name}
-                      </p>
-                      <p className="text-xs text-neutral-600">
-                        <a href={`mailto:${b.email}`} className="hover:text-brand">{b.email}</a>
-                        {" · "}
-                        <a href={`tel:${b.phone.replace(/\s/g, "")}`} className="hover:text-brand">{b.phone}</a>
-                      </p>
+                  <div key={b.id} className="px-5 py-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold">
+                          {b.first_name} {b.last_name}
+                        </p>
+                        <p className="text-xs text-neutral-600">
+                          <a href={`mailto:${b.email}`} className="hover:text-brand">{b.email}</a>
+                          {" · "}
+                          <a href={`tel:${b.phone.replace(/\s/g, "")}`} className="hover:text-brand">{b.phone}</a>
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="rounded-md bg-neutral-900 px-2.5 py-1 text-xs font-mono text-white">
+                          {fmtHour(b.start_hour)} – {fmtHour(b.end_hour)}
+                        </span>
+                        <button
+                          onClick={() => removeBooking(b.id)}
+                          disabled={busyId === b.id}
+                          className="rounded-md border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                        >
+                          {busyId === b.id ? "…" : "Eliminar"}
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="rounded-md bg-neutral-900 px-2.5 py-1 text-xs font-mono text-white">
-                        {fmtHour(b.start_hour)} – {fmtHour(b.end_hour)}
-                      </span>
-                      <button
-                        onClick={() => removeBooking(b.id)}
-                        disabled={busyId === b.id}
-                        className="rounded-md border border-red-200 px-2.5 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
-                      >
-                        {busyId === b.id ? "…" : "Eliminar"}
-                      </button>
-                    </div>
+                    {b.topic && (
+                      <div className="mt-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3">
+                        <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                          Tema del podcast
+                        </p>
+                        <p className="text-sm whitespace-pre-wrap text-neutral-800">{b.topic}</p>
+                      </div>
+                    )}
+                    {b.terms_accepted_at && (
+                      <p className="mt-2 text-[11px] text-neutral-500">
+                        ✓ Aceptó T&amp;C v{b.terms_version} ·{" "}
+                        {new Date(b.terms_accepted_at).toLocaleString("es-PA", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>

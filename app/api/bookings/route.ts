@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ensureSchema, sql } from "@/lib/db";
+import { ensureSchema, getTerms, sql } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +13,9 @@ type Body = {
   phone?: string;
   date?: string;
   hours?: number[];
+  topic?: string;
+  termsVersion?: number;
+  termsAccepted?: boolean;
 };
 
 function clean(s: unknown, max = 120) {
@@ -32,6 +35,7 @@ export async function POST(req: Request) {
   const email = clean(body.email, 120).toLowerCase();
   const phone = clean(body.phone, 30);
   const date = clean(body.date, 10);
+  const topic = clean(body.topic, 800);
   const hours = Array.isArray(body.hours)
     ? body.hours.filter((h): h is number => Number.isInteger(h)).sort((a, b) => a - b)
     : [];
@@ -59,6 +63,18 @@ export async function POST(req: Request) {
       );
     }
   }
+  if (topic.length < 10) {
+    return NextResponse.json(
+      { error: "Cuéntanos brevemente de qué van a hablar (mínimo 10 caracteres)." },
+      { status: 400 }
+    );
+  }
+  if (body.termsAccepted !== true) {
+    return NextResponse.json(
+      { error: "Debes aceptar los términos y condiciones." },
+      { status: 400 }
+    );
+  }
 
   const todayPanama = new Date(
     new Date().toLocaleString("en-US", { timeZone: "America/Panama" })
@@ -69,6 +85,17 @@ export async function POST(req: Request) {
   }
 
   await ensureSchema();
+
+  const terms = await getTerms();
+  if (body.termsVersion !== terms.version) {
+    return NextResponse.json(
+      {
+        error: "Los términos y condiciones se actualizaron. Por favor recarga la página y vuelve a aceptarlos.",
+        currentVersion: terms.version,
+      },
+      { status: 409 }
+    );
+  }
 
   const { rows: existing } = await sql<{ start_hour: number; end_hour: number }>`
     SELECT start_hour, end_hour FROM bookings WHERE booking_date = ${date}
@@ -92,8 +119,8 @@ export async function POST(req: Request) {
 
   for (const r of ranges) {
     await sql`
-      INSERT INTO bookings (first_name, last_name, email, phone, booking_date, start_hour, end_hour)
-      VALUES (${firstName}, ${lastName}, ${email}, ${phone}, ${date}, ${r.start}, ${r.end})
+      INSERT INTO bookings (first_name, last_name, email, phone, booking_date, start_hour, end_hour, topic, terms_version, terms_accepted_at)
+      VALUES (${firstName}, ${lastName}, ${email}, ${phone}, ${date}, ${r.start}, ${r.end}, ${topic}, ${terms.version}, NOW())
     `;
   }
 
