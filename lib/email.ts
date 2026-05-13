@@ -1,10 +1,9 @@
-const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
-const FROM_EMAIL = process.env.EMAIL_FROM || "";
-const FROM_NAME = process.env.EMAIL_FROM_NAME || "Steren Podcast Studio";
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+function getAdminEmails(): string[] {
+  return (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 
 const LOGO_URL = "https://www.steren.com.pa/media/logo/stores/1/logo_2.png";
 const MAP_URL = "https://maps.app.goo.gl/ipWEW9FY3e3TRyKW6";
@@ -36,11 +35,17 @@ type BrevoSendOpts = {
 };
 
 async function brevoSend(opts: BrevoSendOpts) {
-  if (!BREVO_API_KEY || !FROM_EMAIL) {
+  const apiKey = process.env.BREVO_API_KEY || "";
+  const fromEmail = process.env.EMAIL_FROM || "";
+  const fromName = process.env.EMAIL_FROM_NAME || "Steren Podcast Studio";
+  if (!apiKey || !fromEmail) {
+    console.warn(
+      `[email] skip send to ${opts.to.map((t) => t.email).join(",")} subject="${opts.subject}" — env missing (apiKey=${!!apiKey}, fromEmail=${!!fromEmail})`
+    );
     return { skipped: true as const };
   }
   const body: Record<string, unknown> = {
-    sender: { name: FROM_NAME, email: FROM_EMAIL },
+    sender: { name: fromName, email: fromEmail },
     to: opts.to,
     subject: opts.subject,
     htmlContent: opts.html,
@@ -49,7 +54,7 @@ async function brevoSend(opts: BrevoSendOpts) {
   const r = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {
-      "api-key": BREVO_API_KEY,
+      "api-key": apiKey,
       "Content-Type": "application/json",
       Accept: "application/json",
     },
@@ -57,9 +62,12 @@ async function brevoSend(opts: BrevoSendOpts) {
   });
   if (!r.ok) {
     const errText = await r.text().catch(() => "");
+    console.error(`[email] Brevo ${r.status} for to=${opts.to.map((t) => t.email).join(",")} subject="${opts.subject}": ${errText}`);
     throw new Error(`Brevo ${r.status}: ${errText}`);
   }
-  return r.json();
+  const json = await r.json();
+  console.log(`[email] sent to=${opts.to.map((t) => t.email).join(",")} subject="${opts.subject}" id=${(json as { messageId?: string }).messageId || "?"}`);
+  return json;
 }
 
 function fmtHour(h: number) {
@@ -231,10 +239,11 @@ export async function sendBookingConfirmation(b: BookingPayload) {
       html: clientHtml,
     }),
   ];
-  if (ADMIN_EMAILS.length) {
+  const adminEmails = getAdminEmails();
+  if (adminEmails.length) {
     tasks.push(
       brevoSend({
-        to: ADMIN_EMAILS.map((e) => ({ email: e })),
+        to: adminEmails.map((e) => ({ email: e })),
         subject: `Nueva reserva · ${b.firstName} ${b.lastName} · ${fmtDateLong(b.date)}`,
         html: adminHtml,
         replyTo: { email: b.email, name: `${b.firstName} ${b.lastName}` },
@@ -289,10 +298,11 @@ export async function sendBookingCancellation(b: BookingPayload) {
       html: clientHtml,
     }),
   ];
-  if (ADMIN_EMAILS.length) {
+  const adminEmails = getAdminEmails();
+  if (adminEmails.length) {
     tasks.push(
       brevoSend({
-        to: ADMIN_EMAILS.map((e) => ({ email: e })),
+        to: adminEmails.map((e) => ({ email: e })),
         subject: `Cancelada · ${b.firstName} ${b.lastName} · ${fmtDateLong(b.date)}`,
         html: adminHtml,
       })
