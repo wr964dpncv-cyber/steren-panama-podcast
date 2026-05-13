@@ -7,6 +7,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const from = searchParams.get("from") || undefined;
   const to = searchParams.get("to") || undefined;
-  const dates = await listBlockedDates(from, to);
-  return NextResponse.json({ dates });
+  const result = await listBlockedDates(from, to);
+  // result = { dates: [...], annual: [...] }
+  return NextResponse.json(result);
 }

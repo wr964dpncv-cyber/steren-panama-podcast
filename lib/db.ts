@@ -78,6 +78,7 @@ export async function ensureSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
+  await sql`ALTER TABLE blocked_dates ADD COLUMN IF NOT EXISTS recurring_annual BOOLEAN NOT NULL DEFAULT FALSE`;
 
   // Bootstrap super admin (Mily) if no users exist yet.
   const { rows: countRows } = await sql<{ c: string }>`SELECT COUNT(*)::text AS c FROM users`;
@@ -149,31 +150,69 @@ export async function listUsers(): Promise<User[]> {
   return rows;
 }
 
-export async function listBlockedDates(from?: string, to?: string): Promise<{ date: string; reason: string }[]> {
+export type BlockedRow = {
+  date: string;
+  reason: string;
+  recurring_annual: boolean;
+  month_day: string; // 'MM-DD'
+};
+
+export async function listAllBlockedRows(): Promise<BlockedRow[]> {
   await ensureSchema();
-  if (from && to && /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to)) {
-    const { rows } = await sql<{ date: string; reason: string }>`
-      SELECT TO_CHAR(blocked_date, 'YYYY-MM-DD') AS date, reason
-      FROM blocked_dates
-      WHERE blocked_date BETWEEN ${from} AND ${to}
-      ORDER BY blocked_date
-    `;
-    return rows;
-  }
-  const { rows } = await sql<{ date: string; reason: string }>`
-    SELECT TO_CHAR(blocked_date, 'YYYY-MM-DD') AS date, reason
+  const { rows } = await sql<BlockedRow>`
+    SELECT TO_CHAR(blocked_date, 'YYYY-MM-DD') AS date,
+           reason,
+           recurring_annual,
+           TO_CHAR(blocked_date, 'MM-DD') AS month_day
     FROM blocked_dates
-    WHERE blocked_date >= CURRENT_DATE
-    ORDER BY blocked_date
-    LIMIT 365
+    ORDER BY recurring_annual DESC, blocked_date
   `;
   return rows;
 }
 
+export async function listBlockedDates(
+  from?: string,
+  to?: string
+): Promise<{ dates: string[]; annual: string[] }> {
+  await ensureSchema();
+  // recurring rules — return as 'MM-DD' patterns
+  const { rows: recurring } = await sql<{ month_day: string }>`
+    SELECT TO_CHAR(blocked_date, 'MM-DD') AS month_day
+    FROM blocked_dates
+    WHERE recurring_annual = TRUE
+  `;
+  const annual = recurring.map((r) => r.month_day);
+
+  // one-off concrete dates in the requested range (or upcoming year by default)
+  let oneOff: { date: string }[];
+  if (from && to && /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to)) {
+    ({ rows: oneOff } = await sql<{ date: string }>`
+      SELECT TO_CHAR(blocked_date, 'YYYY-MM-DD') AS date
+      FROM blocked_dates
+      WHERE recurring_annual = FALSE
+        AND blocked_date BETWEEN ${from} AND ${to}
+      ORDER BY blocked_date
+    `);
+  } else {
+    ({ rows: oneOff } = await sql<{ date: string }>`
+      SELECT TO_CHAR(blocked_date, 'YYYY-MM-DD') AS date
+      FROM blocked_dates
+      WHERE recurring_annual = FALSE AND blocked_date >= CURRENT_DATE
+      ORDER BY blocked_date
+      LIMIT 365
+    `);
+  }
+  return { dates: oneOff.map((r) => r.date), annual };
+}
+
 export async function isDateBlocked(date: string): Promise<{ blocked: boolean; reason: string }> {
   await ensureSchema();
+  const mmdd = date.slice(5); // 'MM-DD'
   const { rows } = await sql<{ reason: string }>`
-    SELECT reason FROM blocked_dates WHERE blocked_date = ${date}
+    SELECT reason FROM blocked_dates
+    WHERE blocked_date = ${date}
+       OR (recurring_annual = TRUE AND TO_CHAR(blocked_date, 'MM-DD') = ${mmdd})
+    LIMIT 1
   `;
   if (rows.length === 0) return { blocked: false, reason: "" };
   return { blocked: true, reason: rows[0].reason };

@@ -44,6 +44,7 @@ export default function Page() {
   const [terms, setTerms] = useState<Terms | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
+  const [blockedAnnual, setBlockedAnnual] = useState<string[]>([]);
   const [dateBlocked, setDateBlocked] = useState<{ blocked: boolean; reason: string }>({ blocked: false, reason: "" });
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -64,7 +65,8 @@ export default function Page() {
         }
         if (!cancelled && blockedR.ok) {
           const data = await blockedR.json();
-          setBlockedDates((data.dates || []).map((d: { date: string }) => d.date));
+          setBlockedDates(Array.isArray(data.dates) ? data.dates : []);
+          setBlockedAnnual(Array.isArray(data.annual) ? data.annual : []);
         }
       } catch {
         /* ignore */
@@ -228,7 +230,13 @@ export default function Page() {
               </span>
             </div>
             <div className="mx-auto max-w-[20rem]">
-              <Calendar value={date} onChange={setDate} min={today} disabledDates={blockedDates} />
+              <Calendar
+                value={date}
+                onChange={setDate}
+                min={today}
+                disabledDates={blockedDates}
+                disabledAnnualPatterns={blockedAnnual}
+              />
             </div>
           </section>
 

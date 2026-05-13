@@ -9,7 +9,9 @@ type Props = {
   max?: string;
   tone?: "light" | "dark";
   disabledDates?: string[]; // greyed and not clickable
+  disabledAnnualPatterns?: string[]; // 'MM-DD' patterns greyed in any year
   blockedDates?: string[]; // red, still clickable
+  blockedAnnualPatterns?: string[]; // 'MM-DD' patterns red in any year
   selectedDates?: string[]; // cyan multi-selection (in addition to value)
   onDateClick?: (date: string) => void; // overrides default click behavior
 };
@@ -41,7 +43,9 @@ export default function Calendar({
   max,
   tone = "light",
   disabledDates,
+  disabledAnnualPatterns,
   blockedDates,
+  blockedAnnualPatterns,
   selectedDates,
   onDateClick,
 }: Props) {
@@ -60,6 +64,8 @@ export default function Calendar({
   const disabledSet = useMemo(() => new Set(disabledDates || []), [disabledDates]);
   const blockedSet = useMemo(() => new Set(blockedDates || []), [blockedDates]);
   const selectedSet = useMemo(() => new Set(selectedDates || []), [selectedDates]);
+  const disabledAnnualSet = useMemo(() => new Set(disabledAnnualPatterns || []), [disabledAnnualPatterns]);
+  const blockedAnnualSet = useMemo(() => new Set(blockedAnnualPatterns || []), [blockedAnnualPatterns]);
   const minDate = min ? stripTime(parseISO(min)) : null;
   const maxDate = max ? stripTime(parseISO(max)) : null;
   const today = stripTime(new Date());
@@ -142,11 +148,15 @@ export default function Calendar({
         {cells.map((d, i) => {
           if (!d) return <div key={`e-${i}`} className="aspect-square" />;
           const iso = toISO(d);
+          const mmdd = iso.slice(5);
           const isToday = d.getTime() === today.getTime();
-          const isBlocked = blockedSet.has(iso);
+          const isBlocked = blockedSet.has(iso) || blockedAnnualSet.has(mmdd);
           const isSelected = selectedSet.has(iso) || iso === value;
           const isDisabled =
-            !!(minDate && d < minDate) || !!(maxDate && d > maxDate) || disabledSet.has(iso);
+            !!(minDate && d < minDate) ||
+            !!(maxDate && d > maxDate) ||
+            disabledSet.has(iso) ||
+            disabledAnnualSet.has(mmdd);
           const isWeekend = d.getDay() === 0 || d.getDay() === 6;
 
           let stateClasses: string;
@@ -181,7 +191,7 @@ export default function Calendar({
               {isToday && !isSelected && !isBlocked && (
                 <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-brand" />
               )}
-              {isDisabled && disabledSet.has(iso) && (
+              {isDisabled && (disabledSet.has(iso) || disabledAnnualSet.has(mmdd)) && (
                 <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
                   <span className="h-px w-5 rotate-45 bg-current opacity-50" />
                 </span>
