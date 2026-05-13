@@ -3,12 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type Props = {
-  value: string; // YYYY-MM-DD
-  onChange: (date: string) => void;
+  value?: string; // YYYY-MM-DD (single-select mode)
+  onChange?: (date: string) => void;
   min?: string;
   max?: string;
   tone?: "light" | "dark";
-  disabledDates?: string[];
+  disabledDates?: string[]; // greyed and not clickable
+  blockedDates?: string[]; // red, still clickable
+  selectedDates?: string[]; // cyan multi-selection (in addition to value)
+  onDateClick?: (date: string) => void; // overrides default click behavior
 };
 
 const MONTHS = [
@@ -31,17 +34,32 @@ function stripTime(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-export default function Calendar({ value, onChange, min, max, tone = "light", disabledDates }: Props) {
-  const selected = useMemo(() => parseISO(value), [value]);
+export default function Calendar({
+  value,
+  onChange,
+  min,
+  max,
+  tone = "light",
+  disabledDates,
+  blockedDates,
+  selectedDates,
+  onDateClick,
+}: Props) {
+  const initial = useMemo(() => (value ? parseISO(value) : new Date()), [value]);
   const [viewMonth, setViewMonth] = useState<Date>(
-    () => new Date(selected.getFullYear(), selected.getMonth(), 1)
+    () => new Date(initial.getFullYear(), initial.getMonth(), 1)
   );
 
   useEffect(() => {
-    setViewMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
-  }, [selected]);
+    if (value) {
+      const d = parseISO(value);
+      setViewMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+    }
+  }, [value]);
 
   const disabledSet = useMemo(() => new Set(disabledDates || []), [disabledDates]);
+  const blockedSet = useMemo(() => new Set(blockedDates || []), [blockedDates]);
+  const selectedSet = useMemo(() => new Set(selectedDates || []), [selectedDates]);
   const minDate = min ? stripTime(parseISO(min)) : null;
   const maxDate = max ? stripTime(parseISO(max)) : null;
   const today = stripTime(new Date());
@@ -59,6 +77,11 @@ export default function Calendar({ value, onChange, min, max, tone = "light", di
   }, [viewMonth]);
 
   const isDark = tone === "dark";
+
+  function handleClick(iso: string) {
+    if (onDateClick) onDateClick(iso);
+    else if (onChange) onChange(iso);
+  }
 
   return (
     <div
@@ -119,38 +142,46 @@ export default function Calendar({ value, onChange, min, max, tone = "light", di
         {cells.map((d, i) => {
           if (!d) return <div key={`e-${i}`} className="aspect-square" />;
           const iso = toISO(d);
-          const isSelected = iso === value;
           const isToday = d.getTime() === today.getTime();
-          const isBlocked = disabledSet.has(iso);
-          const disabled =
-            (minDate && d < minDate) || (maxDate && d > maxDate) || isBlocked;
+          const isBlocked = blockedSet.has(iso);
+          const isSelected = selectedSet.has(iso) || iso === value;
+          const isDisabled =
+            !!(minDate && d < minDate) || !!(maxDate && d > maxDate) || disabledSet.has(iso);
           const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+
+          let stateClasses: string;
+          if (isDisabled) {
+            stateClasses = isDark ? "cursor-not-allowed text-neutral-700" : "cursor-not-allowed text-neutral-300";
+          } else if (isBlocked) {
+            stateClasses = "bg-red-500 text-white shadow-sm hover:bg-red-600";
+          } else if (isSelected) {
+            stateClasses = "bg-brand text-white shadow-glow hover:bg-brand-dark";
+          } else if (isToday) {
+            stateClasses = isDark
+              ? "bg-white/5 text-white ring-1 ring-brand/50 hover:bg-white/10"
+              : "bg-brand/5 text-brand ring-1 ring-brand/40 hover:bg-brand/10";
+          } else {
+            stateClasses = isDark
+              ? `${isWeekend ? "text-neutral-400" : "text-white"} hover:bg-white/10`
+              : `${isWeekend ? "text-neutral-500" : "text-ink-950"} hover:bg-neutral-100`;
+          }
+
           return (
             <button
               key={iso}
               type="button"
-              disabled={!!disabled}
-              onClick={() => onChange(iso)}
+              disabled={isDisabled}
+              onClick={() => handleClick(iso)}
               className={[
                 "relative aspect-square rounded-xl text-sm font-medium transition",
-                disabled
-                  ? isDark ? "cursor-not-allowed text-neutral-700" : "cursor-not-allowed text-neutral-300"
-                  : isSelected
-                    ? "bg-brand text-white shadow-glow"
-                    : isToday
-                      ? isDark
-                        ? "bg-white/5 text-white ring-1 ring-brand/50"
-                        : "bg-brand/5 text-brand ring-1 ring-brand/40"
-                      : isDark
-                        ? `${isWeekend ? "text-neutral-400" : "text-white"} hover:bg-white/10`
-                        : `${isWeekend ? "text-neutral-500" : "text-ink-950"} hover:bg-neutral-100`,
+                stateClasses,
               ].join(" ")}
             >
               {d.getDate()}
-              {isToday && !isSelected && (
+              {isToday && !isSelected && !isBlocked && (
                 <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-brand" />
               )}
-              {isBlocked && (
+              {isDisabled && disabledSet.has(iso) && (
                 <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
                   <span className="h-px w-5 rotate-45 bg-current opacity-50" />
                 </span>
