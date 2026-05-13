@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ensureSchema, getTerms, sql } from "@/lib/db";
+import { sendBookingConfirmation } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -122,6 +123,12 @@ export async function POST(req: Request) {
       INSERT INTO bookings (first_name, last_name, email, phone, booking_date, start_hour, end_hour, topic, terms_version, terms_accepted_at)
       VALUES (${firstName}, ${lastName}, ${email}, ${phone}, ${date}, ${r.start}, ${r.end}, ${topic}, ${terms.version}, NOW())
     `;
+  }
+
+  try {
+    await sendBookingConfirmation({ firstName, lastName, email, phone, date, hours, topic });
+  } catch (e) {
+    console.error("Email confirmation failed:", e);
   }
 
   return NextResponse.json({ ok: true, date, hours });

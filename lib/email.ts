@@ -1,0 +1,250 @@
+import { Resend } from "resend";
+
+const apiKey = process.env.RESEND_API_KEY || "";
+const FROM = process.env.EMAIL_FROM || "Steren Podcast Studio <onboarding@resend.dev>";
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+const LOGO_URL = "https://www.steren.com.pa/media/logo/stores/1/logo_2.png";
+const MAP_URL = "https://maps.app.goo.gl/ipWEW9FY3e3TRyKW6";
+const SITE_URL = process.env.PUBLIC_SITE_URL || "https://steren-panama-podcast.vercel.app";
+
+export type BookingPayload = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  date: string;
+  hours: number[];
+  topic: string;
+};
+
+function fmtHour(h: number) {
+  const period = h >= 12 ? "pm" : "am";
+  const display = h > 12 ? h - 12 : h === 0 ? 12 : h;
+  return `${display}${period}`;
+}
+
+function fmtSlots(hours: number[]) {
+  const sorted = [...hours].sort((a, b) => a - b);
+  const ranges: { start: number; end: number }[] = [];
+  for (const h of sorted) {
+    const last = ranges[ranges.length - 1];
+    if (last && last.end === h) last.end = h + 1;
+    else ranges.push({ start: h, end: h + 1 });
+  }
+  return ranges.map((r) => `${fmtHour(r.start)} – ${fmtHour(r.end)}`).join(" · ");
+}
+
+function fmtDateLong(iso: string) {
+  return new Date(iso + "T00:00").toLocaleDateString("es-PA", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function escape(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function shellHtml(opts: {
+  preheader: string;
+  badge: string;
+  badgeColor: string;
+  title: string;
+  intro: string;
+  body: string;
+}) {
+  return `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escape(opts.title)}</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#0a0a0a;">
+<span style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;">${escape(opts.preheader)}</span>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:24px 12px;">
+  <tr><td align="center">
+    <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04),0 8px 24px -8px rgba(0,0,0,0.08);">
+      <tr><td style="background:#06070a;padding:24px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td><img src="${LOGO_URL}" alt="Steren Panamá" height="28" style="height:28px;width:auto;display:block;filter:brightness(0) invert(1);"></td>
+            <td align="right" style="font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#a1a1aa;">Podcast Studio</td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style="height:3px;background:linear-gradient(90deg,transparent,#e30613,transparent);font-size:0;line-height:0;">&nbsp;</td></tr>
+      <tr><td style="padding:32px 28px 8px 28px;">
+        <span style="display:inline-block;background:${opts.badgeColor};color:#ffffff;font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;padding:5px 10px;border-radius:9999px;">${escape(opts.badge)}</span>
+        <h1 style="margin:14px 0 6px 0;font-size:26px;line-height:1.15;font-weight:900;letter-spacing:-0.01em;color:#0a0a0a;">${escape(opts.title)}</h1>
+        <p style="margin:0;color:#525252;font-size:14px;line-height:1.55;">${opts.intro}</p>
+      </td></tr>
+      <tr><td style="padding:18px 28px 28px 28px;">${opts.body}</td></tr>
+      <tr><td style="background:#fafafa;border-top:1px solid #e5e5e5;padding:18px 28px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="font-size:12px;color:#737373;line-height:1.5;">
+              <strong style="color:#0a0a0a;">Steren Villa Lucre</strong><br>
+              Plaza Villa Lucre, San Miguelito, Vía Domingo Díaz<br>
+              <a href="${MAP_URL}" style="color:#e30613;text-decoration:none;font-weight:600;">Cómo llegar →</a>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+      <tr><td style="background:#06070a;padding:14px 28px;text-align:center;font-size:11px;color:#737373;letter-spacing:0.1em;">
+        © ${new Date().getFullYear()} Steren Panamá · Podcast Studio
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+}
+
+function detailsCardHtml(b: BookingPayload) {
+  return `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fafafa;border:1px solid #e5e5e5;border-radius:14px;margin-top:8px;">
+    <tr><td style="padding:16px 18px;">
+      <p style="margin:0 0 4px 0;font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:#737373;">Fecha</p>
+      <p style="margin:0 0 14px 0;font-size:15px;font-weight:700;color:#0a0a0a;text-transform:capitalize;">${escape(fmtDateLong(b.date))}</p>
+      <p style="margin:0 0 4px 0;font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:#737373;">Horario</p>
+      <p style="margin:0 0 14px 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;font-weight:700;color:#0a0a0a;">${escape(fmtSlots(b.hours))}</p>
+      <p style="margin:0 0 4px 0;font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:#737373;">Tema</p>
+      <p style="margin:0;font-size:14px;color:#262626;line-height:1.5;white-space:pre-wrap;">${escape(b.topic)}</p>
+    </td></tr>
+  </table>`;
+}
+
+export async function sendBookingConfirmation(b: BookingPayload) {
+  if (!apiKey) return { skipped: true };
+  const resend = new Resend(apiKey);
+
+  const clientHtml = shellHtml({
+    preheader: `Tu reserva del podcast studio está confirmada para ${fmtDateLong(b.date)}.`,
+    badge: "Reserva confirmada",
+    badgeColor: "#16a34a",
+    title: "¡Listo, está confirmada!",
+    intro: `Hola <strong>${escape(b.firstName)}</strong>, tu sesión en el Podcast Studio de Steren Panamá está reservada. Aquí están los detalles:`,
+    body:
+      detailsCardHtml(b) +
+      `<p style="margin:18px 0 6px 0;font-size:13px;color:#525252;line-height:1.55;">
+        Recuerda llegar 5 minutos antes. Si tienes que cancelar, hazlo con al menos 24 h de anticipación respondiendo a este correo.
+      </p>
+      <p style="margin:0;font-size:12px;color:#737373;line-height:1.5;">
+        Al reservar aceptaste los términos y condiciones del studio: el contenido grabado debe respetar la línea de marca y los productos / logos Steren visibles en el set.
+      </p>
+      <p style="margin:18px 0 0 0;">
+        <a href="${SITE_URL}" style="display:inline-block;background:#06070a;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;">Ver studio</a>
+      </p>`,
+  });
+
+  const adminHtml = shellHtml({
+    preheader: `Nueva reserva de ${b.firstName} ${b.lastName} para ${fmtDateLong(b.date)}.`,
+    badge: "Nueva reserva",
+    badgeColor: "#e30613",
+    title: `Nueva reserva · ${b.firstName} ${b.lastName}`,
+    intro: `Se acaba de registrar una nueva reserva en el Podcast Studio.`,
+    body:
+      detailsCardHtml(b) +
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fafafa;border:1px solid #e5e5e5;border-radius:14px;margin-top:12px;">
+        <tr><td style="padding:16px 18px;">
+          <p style="margin:0 0 4px 0;font-size:10px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:#737373;">Cliente</p>
+          <p style="margin:0 0 6px 0;font-size:14px;color:#0a0a0a;font-weight:700;">${escape(b.firstName)} ${escape(b.lastName)}</p>
+          <p style="margin:0;font-size:13px;color:#525252;">
+            <a href="mailto:${escape(b.email)}" style="color:#e30613;text-decoration:none;">${escape(b.email)}</a> ·
+            <a href="tel:${escape(b.phone.replace(/\s/g, ""))}" style="color:#e30613;text-decoration:none;">${escape(b.phone)}</a>
+          </p>
+        </td></tr>
+      </table>
+      <p style="margin:18px 0 0 0;">
+        <a href="${SITE_URL}/admin" style="display:inline-block;background:#e30613;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;">Abrir panel</a>
+      </p>`,
+  });
+
+  const results = await Promise.allSettled([
+    resend.emails.send({
+      from: FROM,
+      to: b.email,
+      subject: "Reserva confirmada · Podcast Studio Steren",
+      html: clientHtml,
+    }),
+    ADMIN_EMAILS.length
+      ? resend.emails.send({
+          from: FROM,
+          to: ADMIN_EMAILS,
+          subject: `Nueva reserva · ${b.firstName} ${b.lastName} · ${fmtDateLong(b.date)}`,
+          html: adminHtml,
+          replyTo: b.email,
+        })
+      : Promise.resolve({ skipped: true }),
+  ]);
+
+  return {
+    client: results[0],
+    admin: results[1],
+  };
+}
+
+export async function sendBookingCancellation(b: BookingPayload) {
+  if (!apiKey) return { skipped: true };
+  const resend = new Resend(apiKey);
+
+  const clientHtml = shellHtml({
+    preheader: `Tu reserva del podcast studio para ${fmtDateLong(b.date)} ha sido cancelada.`,
+    badge: "Reserva cancelada",
+    badgeColor: "#dc2626",
+    title: "Tu reserva fue cancelada",
+    intro: `Hola <strong>${escape(b.firstName)}</strong>, te avisamos que tu reserva en el Podcast Studio de Steren Panamá fue cancelada.`,
+    body:
+      detailsCardHtml(b) +
+      `<p style="margin:18px 0 0 0;font-size:13px;color:#525252;line-height:1.55;">
+        Si quieres reagendar para otra fecha, puedes hacerlo desde el sitio o respondiendo a este correo.
+      </p>
+      <p style="margin:14px 0 0 0;">
+        <a href="${SITE_URL}" style="display:inline-block;background:#06070a;color:#ffffff;font-size:12px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;padding:11px 18px;border-radius:10px;text-decoration:none;">Reservar otra fecha</a>
+      </p>`,
+  });
+
+  const adminHtml = shellHtml({
+    preheader: `Reserva cancelada de ${b.firstName} ${b.lastName} para ${fmtDateLong(b.date)}.`,
+    badge: "Reserva cancelada",
+    badgeColor: "#dc2626",
+    title: `Reserva cancelada · ${b.firstName} ${b.lastName}`,
+    intro: `Esta reserva fue eliminada desde el panel administrativo.`,
+    body:
+      detailsCardHtml(b) +
+      `<p style="margin:14px 0 0 0;font-size:12px;color:#737373;">
+        Cliente: <a href="mailto:${escape(b.email)}" style="color:#e30613;text-decoration:none;">${escape(b.email)}</a> ·
+        <a href="tel:${escape(b.phone.replace(/\s/g, ""))}" style="color:#e30613;text-decoration:none;">${escape(b.phone)}</a>
+      </p>`,
+  });
+
+  const results = await Promise.allSettled([
+    resend.emails.send({
+      from: FROM,
+      to: b.email,
+      subject: "Reserva cancelada · Podcast Studio Steren",
+      html: clientHtml,
+    }),
+    ADMIN_EMAILS.length
+      ? resend.emails.send({
+          from: FROM,
+          to: ADMIN_EMAILS,
+          subject: `Cancelada · ${b.firstName} ${b.lastName} · ${fmtDateLong(b.date)}`,
+          html: adminHtml,
+        })
+      : Promise.resolve({ skipped: true }),
+  ]);
+
+  return { client: results[0], admin: results[1] };
+}
