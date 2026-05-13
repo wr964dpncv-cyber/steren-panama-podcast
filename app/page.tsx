@@ -592,7 +592,7 @@ function SocialField({
       <div className="relative">
         <span
           aria-hidden="true"
-          className="absolute left-3 top-1/2 -translate-y-1/2"
+          className="pointer-events-none absolute left-3 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center"
           style={{ color: iconColor }}
         >
           {icon}
@@ -603,7 +603,7 @@ function SocialField({
           onChange={(e) => onChange(e.target.value)}
           maxLength={200}
           placeholder={placeholder}
-          className="input pl-9"
+          className="input pl-11"
         />
       </div>
     </div>
