@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Header from "@/components/Header";
 
 const OPEN_HOUR = 9;
 const CLOSE_HOUR = 18;
@@ -109,18 +110,24 @@ export default function Page() {
   const sortedSelected = Array.from(selected).sort((a, b) => a - b);
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-10">
-      <header className="mb-8">
-        <div className="inline-flex items-center gap-2 rounded-full bg-brand px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white">
-          Steren Panamá
+    <>
+      <Header />
+      <div className="bg-grid border-b border-neutral-200 bg-white">
+        <div className="mx-auto max-w-2xl px-4 py-10">
+          <div className="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-brand">
+            <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+            Reservas en línea
+          </div>
+          <h1 className="mt-3 text-3xl font-black tracking-tight md:text-5xl">
+            Reserva el <span className="text-brand">Podcast Studio</span>
+          </h1>
+          <p className="mt-2 max-w-lg text-sm text-neutral-600">
+            Sesiones disponibles de 9:00 am a 6:00 pm. Elige la fecha, las horas que necesitas y completa tus datos. Confirmación al instante.
+          </p>
         </div>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
-          Reserva el Podcast Studio
-        </h1>
-        <p className="mt-2 text-sm text-neutral-600">
-          Sesiones disponibles de 9:00 am a 6:00 pm. Selecciona la fecha, las horas que necesitas y completa tus datos.
-        </p>
-      </header>
+      </div>
+
+      <main className="mx-auto max-w-2xl px-4 py-8">
 
       {success && (
         <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-900">
@@ -238,9 +245,10 @@ export default function Page() {
         </button>
       </form>
 
-      <footer className="mt-8 text-center text-xs text-neutral-500">
-        Steren Panamá · Podcast Studio
+      </main>
+      <footer className="mx-auto max-w-5xl px-4 py-8 text-center text-xs text-neutral-500">
+        © {new Date().getFullYear()} Steren Panamá · Podcast Studio
       </footer>
-    </main>
+    </>
   );
 }
