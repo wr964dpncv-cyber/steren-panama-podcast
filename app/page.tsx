@@ -267,7 +267,7 @@ export default function Page() {
                 {dateBlocked.reason ? ` ${dateBlocked.reason}` : " Por favor elige otra fecha."}
               </div>
             )}
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-2">
               {ALL_HOURS.map((h) => {
                 const isTaken = taken.has(h);
                 const isSelected = selected.has(h);
@@ -278,7 +278,7 @@ export default function Page() {
                     disabled={isTaken || loadingAvailability}
                     onClick={() => toggleHour(h)}
                     className={[
-                      "rounded-xl px-3 py-3 text-sm font-semibold transition",
+                      "whitespace-nowrap rounded-xl px-1.5 py-2.5 text-[12px] font-semibold tabular-nums transition sm:px-3 sm:py-3 sm:text-sm",
                       isTaken
                         ? "cursor-not-allowed bg-neutral-100 text-neutral-400 line-through"
                         : isSelected
@@ -286,7 +286,7 @@ export default function Page() {
                           : "border border-neutral-200 bg-white text-ink-950 hover:border-brand hover:bg-brand hover:text-white",
                     ].join(" ")}
                   >
-                    {fmtHour(h)} – {fmtHour(h + 1)}
+                    {fmtHour(h)}–{fmtHour(h + 1)}
                   </button>
                 );
               })}
@@ -377,7 +377,7 @@ export default function Page() {
               <p className="mb-3 text-xs text-neutral-500">
                 Para que podamos seguirte y compartir tu episodio. Pega tu @usuario o el link completo.
               </p>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-2.5">
                 <SocialField
                   label="YouTube"
                   value={socialYoutube}
@@ -585,25 +585,25 @@ function SocialField({
   iconColor: string;
 }) {
   return (
-    <div>
-      <label className="mb-1 block text-[10px] font-medium uppercase tracking-wider text-neutral-500">
-        {label}
-      </label>
-      <div className="relative">
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute left-3 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center"
-          style={{ color: iconColor }}
-        >
-          {icon}
-        </span>
+    <div className="flex items-center gap-2.5">
+      <div
+        aria-hidden="true"
+        className="flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50"
+        style={{ color: iconColor }}
+      >
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <label className="mb-0.5 block text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+          {label}
+        </label>
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           maxLength={200}
           placeholder={placeholder}
-          className="input pl-11"
+          className="input"
         />
       </div>
     </div>

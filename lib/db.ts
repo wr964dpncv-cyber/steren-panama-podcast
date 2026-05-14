@@ -9,6 +9,7 @@ export type User = {
   email: string;
   name: string;
   is_super_admin: boolean;
+  notify_bookings: boolean;
   created_at: string;
 };
 
@@ -63,6 +64,7 @@ export async function ensureSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS notify_bookings BOOLEAN NOT NULL DEFAULT TRUE`;
 
   await sql`
     CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -130,7 +132,7 @@ export async function updateTerms(content: string): Promise<{ version: number; u
 export async function getUserById(id: number): Promise<User | null> {
   await ensureSchema();
   const { rows } = await sql<User>`
-    SELECT id, email, name, is_super_admin, created_at::text AS created_at
+    SELECT id, email, name, is_super_admin, notify_bookings, created_at::text AS created_at
     FROM users WHERE id = ${id}
   `;
   return rows[0] || null;
@@ -139,7 +141,7 @@ export async function getUserById(id: number): Promise<User | null> {
 export async function getUserByEmail(email: string): Promise<(User & { password_hash: string }) | null> {
   await ensureSchema();
   const { rows } = await sql<User & { password_hash: string }>`
-    SELECT id, email, name, is_super_admin, password_hash, created_at::text AS created_at
+    SELECT id, email, name, is_super_admin, notify_bookings, password_hash, created_at::text AS created_at
     FROM users WHERE email = ${email.toLowerCase()}
   `;
   return rows[0] || null;
@@ -148,10 +150,26 @@ export async function getUserByEmail(email: string): Promise<(User & { password_
 export async function listUsers(): Promise<User[]> {
   await ensureSchema();
   const { rows } = await sql<User>`
-    SELECT id, email, name, is_super_admin, created_at::text AS created_at
+    SELECT id, email, name, is_super_admin, notify_bookings, created_at::text AS created_at
     FROM users ORDER BY is_super_admin DESC, created_at ASC
   `;
   return rows;
+}
+
+// Returns the effective list of admin emails to notify, taking into account
+// any users in the DB who have opted out via notify_bookings = false.
+export async function filterOptedOutEmails(emails: string[]): Promise<string[]> {
+  if (emails.length === 0) return [];
+  await ensureSchema();
+  const lowered = emails.map((e) => e.toLowerCase());
+  const { rows } = await sql<{ email: string }>`
+    SELECT email FROM users
+    WHERE notify_bookings = FALSE
+  `;
+  const optedOut = new Set(rows.map((r) => r.email.toLowerCase()));
+  return emails.filter((e) => !optedOut.has(e.toLowerCase()));
+  // (lowered referenced for typecheck no-op)
+  void lowered;
 }
 
 export type BlockedRow = {

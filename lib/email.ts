@@ -1,8 +1,20 @@
-function getAdminEmails(): string[] {
+import { filterOptedOutEmails } from "./db";
+
+function getAdminEmailsFromEnv(): string[] {
   return (process.env.ADMIN_EMAILS || "")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+async function getAdminEmails(): Promise<string[]> {
+  const env = getAdminEmailsFromEnv();
+  try {
+    return await filterOptedOutEmails(env);
+  } catch (e) {
+    console.error("Failed to filter opted-out admins:", e);
+    return env;
+  }
 }
 
 const LOGO_URL = "https://www.steren.com.pa/media/logo/stores/1/logo_2.png";
@@ -265,7 +277,7 @@ export async function sendBookingConfirmation(b: BookingPayload) {
       html: clientHtml,
     }),
   ];
-  const adminEmails = getAdminEmails();
+  const adminEmails = await getAdminEmails();
   if (adminEmails.length) {
     tasks.push(
       brevoSend({
@@ -324,7 +336,7 @@ export async function sendBookingCancellation(b: BookingPayload) {
       html: clientHtml,
     }),
   ];
-  const adminEmails = getAdminEmails();
+  const adminEmails = await getAdminEmails();
   if (adminEmails.length) {
     tasks.push(
       brevoSend({

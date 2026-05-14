@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import AdminShell from "@/components/AdminShell";
 
-type Me = { id: number; email: string; name: string; is_super_admin: boolean };
+type Me = {
+  id: number;
+  email: string;
+  name: string;
+  is_super_admin: boolean;
+  notify_bookings: boolean;
+};
 
 export default function CuentaPage() {
   const [me, setMe] = useState<Me | null>(null);
@@ -13,6 +19,8 @@ export default function CuentaPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [savingPref, setSavingPref] = useState(false);
+  const [prefMessage, setPrefMessage] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -53,6 +61,29 @@ export default function CuentaPage() {
     }
   }
 
+  async function toggleNotifications(next: boolean) {
+    if (!me) return;
+    setSavingPref(true);
+    setPrefMessage(null);
+    const previous = me.notify_bookings;
+    setMe({ ...me, notify_bookings: next });
+    try {
+      const r = await fetch("/api/admin/preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notify_bookings: next }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "Error");
+      setPrefMessage(next ? "Recibirás notificaciones por correo." : "Notificaciones desactivadas.");
+    } catch (e: unknown) {
+      setMe({ ...me, notify_bookings: previous });
+      setPrefMessage(e instanceof Error ? e.message : "Error de red");
+    } finally {
+      setSavingPref(false);
+    }
+  }
+
   return (
     <AdminShell>
       <main className="mx-auto max-w-2xl px-4 py-8">
@@ -81,6 +112,46 @@ export default function CuentaPage() {
               )}
             </p>
           </div>
+        </section>
+
+        <section className="mb-6 rounded-2xl bg-white p-6 shadow-soft ring-1 ring-neutral-200/80">
+          <h2 className="mb-2 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-neutral-500">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            </svg>
+            Notificaciones
+          </h2>
+          <p className="mb-4 text-sm text-neutral-600">
+            Decide si quieres recibir un correo cada vez que un creador haga o cancele una reserva.
+          </p>
+          <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${me?.notify_bookings ? "border-brand bg-brand/5" : "border-neutral-200 bg-neutral-50"}`}>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={me?.notify_bookings ?? true}
+              disabled={!me || savingPref}
+              onClick={() => toggleNotifications(!(me?.notify_bookings ?? true))}
+              className={`relative mt-0.5 flex h-6 w-11 flex-none items-center rounded-full transition ${me?.notify_bookings ? "bg-brand" : "bg-neutral-300"} disabled:opacity-60`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${me?.notify_bookings ? "translate-x-5" : "translate-x-0.5"}`}
+              />
+            </button>
+            <div className="flex-1">
+              <span className="block text-sm font-semibold text-ink-950">
+                Recibir correos de nuevas reservas y cancelaciones
+              </span>
+              <span className="mt-0.5 block text-xs text-neutral-600">
+                {me?.notify_bookings
+                  ? "Activado: te llegará correo cada vez que se reserve o cancele."
+                  : "Desactivado: no recibirás correos automáticos."}
+              </span>
+              {prefMessage && (
+                <span className="mt-2 block text-xs text-brand-700">{prefMessage}</span>
+              )}
+            </div>
+          </label>
         </section>
 
         <section className="rounded-2xl bg-white p-6 shadow-soft ring-1 ring-neutral-200/80">
